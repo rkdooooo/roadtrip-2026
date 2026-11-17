@@ -5,7 +5,8 @@ const fs = require('fs'), path = require('path'), vm = require('vm');
 const dir = path.join(__dirname, '..');
 const ctx = { window: {} };
 vm.runInNewContext(fs.readFileSync(path.join(dir, 'trip-data.js'), 'utf8'), ctx);
-const T = ctx.window.TRIP;
+vm.runInNewContext(fs.readFileSync(path.join(dir, 'schedule.js'), 'utf8'), ctx);
+const T = ctx.window.TRIP, SCH = ctx.window.SCHEDULE;
 const LONG_PACE = 1.15, CITY_PACE = 1.3, OSRM = 'https://router.project-osrm.org';
 
 // ---- GCJ-02 <-> WGS-84 ----
@@ -41,7 +42,8 @@ async function get(url) { for (let i = 0; i < 3; i++) { try { const j = await (a
       legs[b.id] = { km: b.drive.km, h: b.drive.h, ferry: true, path: [a.lnglat, b.lnglat] };
       continue;
     }
-    const p = [a.lnglat, b.lnglat].map(gcj2wgs).map(q => q.map(r5).join(',')).join(';');
+    const p = [a.lnglat, ...((b.drive && b.drive.waypoints) || []), b.lnglat].map(gcj2wgs)  // waypoints：强制途经点（如深中通道）
+   .map(q => q.map(r5).join(',')).join(';');
     const j = await get(`${OSRM}/route/v1/driving/${p}?overview=full&geometries=geojson`);
     const r = j.routes[0];
     const path = simplify(r.geometry.coordinates.map(wgs2gcj)).map(q => q.map(r5));
@@ -57,7 +59,51 @@ async function get(url) { for (let i = 0; i < 3; i++) { try { const j = await (a
       : { km: Math.round(j.distances[0][i + 1] / 100) / 10, min: Math.max(5, Math.round(j.durations[0][i + 1] * CITY_PACE / 300) * 5) });
     await sleep(400);
   }
-  const out = `// 自动生成，勿手改：node tools/build.js（${new Date().toISOString().slice(0, 10)}，OSRM 路网）\nwindow.GEN=${JSON.stringify({ legs, dist })};\n`;
+  // ---- 日程：解析每项的位置，计算相邻两个地点之间的车程 ----
+  const stopById = Object.fromEntries(T.stops.map(x => [x.id, x]));
+  function resolve(day, it) {
+    if (it.ll) return { ll: it.ll };
+    if (it.base) return { ll: stopById[it.base].lnglat, ref: 'base:' + it.base };
+    if (!it.s) return null;
+    const pools = [stopById[it.city || day.at], ...T.stops];
+    for (const st of pools) {
+      const j = (st.spots || []).findIndex(p => p.name.startsWith(it.s) || p.name.includes(it.s));
+      if (j >= 0) return { ll: st.spots[j].lnglat, ref: st.id + ':' + j };
+    }
+    throw new Error(`日程里找不到景点「${it.s}」（${day.d}）`);
+  }
+  const days = {}, memo = {};
+  for (let di = 0; di < SCH.length; di++) {
+    const day = SCH[di];
+    const pos = day.items.map(it => resolve(day, it));
+    // 早上从前一晚的住处出发、晚上回当晚的住处：没写出来的这两段也要算（下标 -1 = 出门，items.length = 回住处）
+    const sleptAt = di ? SCH[di - 1].at : 'suzhou', firstLoc = pos.findIndex(p => p), lastLoc = pos.map(p => !!p).lastIndexOf(true);
+    const extra = {};
+    if (firstLoc >= 0 && !day.items[firstLoc].base) extra[-1] = { ll: stopById[sleptAt].lnglat, ref: 'base:' + sleptAt };
+    if (lastLoc >= 0 && !day.items[lastLoc].base && stopById[day.at].type !== 'home') extra[day.items.length] = { ll: stopById[day.at].lnglat, ref: 'base:' + day.at };
+    const P = i => pos[i] || extra[i];
+    const located = [...(extra[-1] ? [-1] : []), ...pos.map((p, i) => p ? i : -1).filter(i => i >= 0), ...(extra[day.items.length] ? [day.items.length] : [])];
+    const hops = [];
+    for (let k = 1; k < located.length; k++) {
+      const ia = located[k - 1], ib = located[k], A = P(ia).ll, B = P(ib).ll, via = (day.items[ib] && day.items[ib].via) || [];
+      if (A[0] === B[0] && A[1] === B[1]) continue;
+      if (day.items[ia] && day.items[ia].base === 'ferry') { hops.push({ a: ia, b: ib, ferry: true, path: [A, B] }); continue; }
+      const key = [A, ...via, B].join('|');
+      if (!memo[key]) {
+        const q = [A, ...via, B].map(gcj2wgs).map(x => x.map(r5).join(',')).join(';');
+        const r = (await get(`${OSRM}/route/v1/driving/${q}?overview=full&geometries=geojson`)).routes[0];
+        const km = r.distance / 1000;
+        memo[key] = { km: km < 10 ? Math.round(km * 10) / 10 : Math.round(km), min: Math.max(5, Math.round(r.duration * (km > 60 ? LONG_PACE : CITY_PACE) / 300) * 5),
+          path: simplify(r.geometry.coordinates.map(wgs2gcj), 0.0008).map(x => x.map(r5)) };
+        await sleep(350);
+      }
+      hops.push({ a: ia, b: ib, ...memo[key] });
+    }
+    days[day.d] = { pos, hops, start: extra[-1] || null, end: extra[day.items.length] || null };
+    const tot = hops.reduce((t, h) => t + (h.ferry ? 0 : h.min), 0);
+    console.log(`${day.d}  ${hops.length} 段  开车约 ${Math.round(tot / 6) / 10} h`);
+  }
+  const out = `// 自动生成，勿手改：node tools/build.js（${new Date().toISOString().slice(0, 10)}，OSRM 路网）\nwindow.GEN=${JSON.stringify({ legs, dist, days })};\n`;
   fs.writeFileSync(path.join(dir, 'generated.js'), out);
   console.log(`\n写入 generated.js（${(out.length / 1024).toFixed(0)} KB）`);
 })().catch(e => { console.error(e.message); process.exit(1); });
