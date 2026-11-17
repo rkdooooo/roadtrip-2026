@@ -38,7 +38,7 @@ async function get(url) { for (let i = 0; i < 3; i++) { try { const j = await (a
   const legs = {}, dist = {};
   for (let i = 1; i < T.stops.length; i++) {
     const a = T.stops[i - 1], b = T.stops[i];
-    if (b.type === 'hotel' && a.type === 'ferry') { // 过海：画直线，不走路网
+    if (a.type === 'ferry' && b.type === 'ferry') { // 过海：画直线，不走路网
       legs[b.id] = { km: b.drive.km, h: b.drive.h, ferry: true, path: [a.lnglat, b.lnglat] };
       continue;
     }

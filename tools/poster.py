@@ -28,13 +28,11 @@ CITIES = {
     "wenzhou":   ("温州", "WENZHOU",   120.672, 28.006),
     "fuzhou":    ("福州", "FUZHOU",    119.297, 26.078),
     "xiamen":    ("厦门", "XIAMEN",    118.105, 24.475),
+    "tulou":     ("永定", "YONGDING TULOU", 116.974, 24.664),
     "shantou":   ("汕头", "SHANTOU",   116.690, 23.358),
     "shenzhen":  ("深圳", "SHENZHEN",  114.060, 22.540),
-    "zhuhai":    ("珠海", "ZHUHAI",    113.565, 22.255),
-    "yangjiang": ("阳江", "HAILING ISLAND", 111.880, 21.640),
+    "kaiping":   ("开平", "KAIPING",   112.585, 22.345),
     "zhanjiang": ("湛江", "ZHANJIANG", 110.375, 21.230),
-    "xuwen":     ("徐闻", "XUWEN",     110.175, 20.330),
-    "haikou":    ("海口", "HAIKOU",    110.330, 20.030),
 }
 Z = 13
 W_IN, H_IN, DPI = 3.6, 4.8, 220
