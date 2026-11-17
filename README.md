@@ -11,6 +11,8 @@
 | `trip-data.js` | 行程数据：站点、晚数、每日安排、景点。**改行程只改这个文件** |
 | `generated.js` | 自动生成的路线和景点车程，不要手改 |
 | `tools/build.js` | 重新生成 `generated.js` |
+| `posters/` | 每个城市的街道海报（maptoposter 风格） |
+| `tools/poster.py` | 重新画海报（说明见文件开头） |
 | `vendor/leaflet/` | Leaflet 1.9.4（BSD-2），放在仓库里，国内打开不依赖外网 CDN |
 
 ## 改了行程之后
@@ -21,3 +23,13 @@ node tools/build.js
 
 ## 部署到 GitHub Pages
 仓库 → Settings → Pages → Source 选 `Deploy from a branch`，Branch 选 `main` / `(root)`，保存后约 1 分钟生效。
+
+## 城市海报
+风格仿照 [maptoposter](https://github.com/originalankur/maptoposter)（MIT）：沿用它的主题 JSON、道路分级配色和线宽、上下渐隐和底部排版。原项目通过 Overpass 拉数据，但 Overpass 公共服务会拒绝自动请求，所以 `tools/poster.py` 改读 [OpenFreeMap](https://openfreemap.org) 的矢量瓦片（同样是 OpenStreetMap 数据）。配色主题是 `tools/clay_pine.json`，换成 maptoposter 自带的其他主题（`noir`、`warm_beige`、`japanese_ink` 等）也可以。
+
+```bash
+git clone https://github.com/originalankur/maptoposter && cd maptoposter && uv sync && uv pip install mapbox-vector-tile
+cp ../tools/clay_pine.json themes/
+.venv/bin/python ../tools/poster.py --maptoposter . --theme clay_pine
+```
+数据 © OpenStreetMap contributors。

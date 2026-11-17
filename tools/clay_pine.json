@@ -1,0 +1,15 @@
+{
+  "name": "Clay Pine",
+  "description": "Pale clay with pine-green roads, matched to the trip page",
+  "bg": "#EFE9E0",
+  "text": "#22261F",
+  "gradient_color": "#EFE9E0",
+  "water": "#D3DCD3",
+  "parks": "#E2DFCF",
+  "road_motorway": "#2E5B44",
+  "road_primary": "#46705A",
+  "road_secondary": "#7E9384",
+  "road_tertiary": "#A9B2A4",
+  "road_residential": "#C9C6B7",
+  "road_default": "#A9B2A4"
+}

@@ -69,6 +69,9 @@ details ul{padding-left:18px;color:var(--muted)}
 .nav button{background:none;border:1px solid var(--line);border-radius:99px;padding:5px 12px;font-size:13px;transition:border-color var(--dur) var(--ease)}
 .nav button:hover{border-color:var(--accent)}
 .nav .pn{display:flex;gap:6px}
+.poster{display:block;border-radius:12px;overflow:hidden;border:1px solid var(--line);margin:0 0 18px;box-shadow:var(--shadow)}
+.poster img{display:block;width:100%;height:auto;transition:transform 600ms var(--ease)}
+.poster:hover img{transform:scale(1.02)}
 .badge{display:inline-block;font:500 11.5px/1.6 var(--sans);padding:0 7px;border-radius:99px;background:var(--chip);color:var(--muted);margin-left:8px;vertical-align:4px}
 .meta{font-size:13.5px;color:var(--muted);margin-top:6px}
 .meta div{margin-top:2px}
@@ -185,7 +188,7 @@ function overview(){
     h += `<li>${cities.includes(s) ? `<button class="row" data-go="${s.id}">${inner}<span class="chev" aria-hidden="true">›</span></button>` : `<div class="row plain">${inner}</div>`}</li>`;
   });
   h += `</ol><details><summary>出发前要知道</summary><ul>${T.assumptions.concat(T.tips).map(t=>`<li>${t}</li>`).join('')}</ul></details>
-    <div class="foot">路线和车程由 OpenStreetMap 路网预先算好，城市里的时间已加三成余量。底图 © 高德地图。</div>`;
+    <div class="foot">路线和车程由 OpenStreetMap 路网预先算好，城市里的时间已加三成余量。底图 © 高德地图。城市海报仿照 maptoposter（MIT）的风格绘制，数据 © OpenStreetMap contributors，瓦片来自 OpenFreeMap。</div>`;
   $('#panel').innerHTML = h; $('#panel').scrollTop = 0;
   document.title = '苏州到五指山自驾';
 }
@@ -201,6 +204,7 @@ function city(s){
   let h = `<div class="nav"><button data-go="">← 全程</button><span class="pn">
       ${prev?`<button data-go="${prev.id}" aria-label="上一站 ${prev.city}">‹ ${prev.city}</button>`:''}
       ${next?`<button data-go="${next.id}" aria-label="下一站 ${next.city}">${next.city} ›</button>`:''}</span></div>
+    <a class="poster" href="posters/${s.id}.webp" target="_blank" rel="noopener"><img src="posters/${s.id}.webp" alt="${s.city}街道海报" width="792" height="1056" onerror="this.parentNode.remove()"></a>
     <h2>${i}. ${s.city}${s.status?`<span class="badge">${s.status}</span>`:''}</h2>
     <div class="meta"><div>${md(s._in)}（周${WD[s._in.getDay()]}）– ${md(s._out)} · ${s.nights} 晚 · ${s.name}</div>
       ${s.addr?`<div>📍 ${s.addr}</div>`:''}
