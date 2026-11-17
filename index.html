@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>苏州到五指山自驾</title>
 <meta name="description" content="2026 年 12 月，从苏州沿海岸线开车回五指山：路线地图、逐日日程、每站景点和图表。">
 <meta name="theme-color" content="#efe9e0">
@@ -155,11 +155,46 @@ dialog.lb .x{position:absolute;top:-14px;right:-14px;width:40px;height:40px;bord
 .dmk{width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--panel);font:700 11px/22px var(--sans);text-align:center;border:2px solid var(--panel);box-shadow:0 1px 4px rgba(0,0,0,.35)}
 .leaflet-popup-content{font:13.5px/1.55 var(--sans);margin:10px 14px}
 .leaflet-popup-content b{font-family:var(--serif)}
+/* ---- 手机：整页滚动、底部导航、大字号、大按钮（长辈用手机看） ---- */
+.bnav,.tomap,.showday{display:none}
 @media (max-width:820px){
-  .app{grid-template-columns:1fr;grid-template-rows:40vh 1fr}
-  #map{grid-row:1}
-  #panel{grid-row:2;border-right:0;border-top:1px solid var(--line);padding:0 16px 40px}
-  h1{font-size:23px}
+  body{font-size:17px;line-height:1.7}
+  .app{display:block;height:auto}
+  #map{height:38vh;min-height:240px;border-bottom:1px solid var(--line)}
+  #panel{overflow:visible;border:0;padding:4px 16px calc(96px + env(safe-area-inset-bottom))}
+  .tabs{display:none}
+  .bnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:1000;background:var(--panel);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom));box-shadow:0 -2px 12px rgba(0,0,0,.06)}
+  .bnav a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:52px;text-decoration:none;color:var(--muted);font-size:15px;border-radius:12px}
+  .bnav a span{font-size:20px;line-height:1.1}
+  .bnav a[aria-current="page"]{color:var(--accent);font-weight:700;background:var(--chip)}
+  .tomap{position:fixed;right:14px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:1000;border:0;border-radius:99px;padding:12px 18px;background:var(--ink);color:var(--panel);font-size:16px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+  .tomap.show{display:block}
+  h1{font-size:26px} h2{font-size:25px} h3{font-size:18px}
+  .sub,.meta,.it .what div,.spot .tip,.geo,.day .dc,.hop,.leg,.row .base,.row .when,.foot2,.cap{font-size:15px}
+  .stat b{font-size:22px} .stat span{font-size:13px}
+  .row{padding:14px 14px;min-height:64px} .row .city{font-size:19px}
+  .pill,.filters button,.links a{min-height:44px;display:inline-flex;align-items:center;padding:0 16px;font-size:16px}
+  .links{gap:8px}
+  .nav{margin:14px 0}
+  .spot{padding:14px 15px} .spot .name{font-size:17px}
+  .chip{font-size:13px;padding:1px 7px}
+  .day{padding:14px 14px 12px;scroll-margin-top:12px}
+  .day header{flex-wrap:wrap;row-gap:6px}
+  .day .dt{font-size:19px}
+  .day .sum{margin-left:0;width:100%;font-size:15px}
+  .it{grid-template-columns:50px 26px 1fr;padding:7px 0}
+  .it .tm{font-size:15px}
+  .it .pin{width:24px;height:24px;font-size:13px}
+  .it .what{font-size:17px}
+  .hop{grid-template-columns:50px 26px 1fr;padding:2px 0}
+  .hop a{display:inline-block;padding:8px 4px;margin:-8px 0}
+  .showday{display:inline-flex}
+  .it .what small{display:block;margin-left:0;font-size:14px}
+  .chart svg text{font-size:12px}
+  details{font-size:15px} summary{padding:8px 0}
+  dialog.lb{max-width:96vw}
+  dialog.lb .x{top:8px;right:8px;width:48px;height:48px;font-size:26px}
+  .leaflet-control-zoom a{width:40px!important;height:40px!important;line-height:40px!important}
 }
 @media print{
   .app{display:block;height:auto} #map,.tabs,.toolbar button,.poster,.links{display:none!important}
@@ -174,11 +209,13 @@ dialog.lb .x{position:absolute;top:-14px;right:-14px;width:40px;height:40px;bord
   <main id="panel" aria-live="polite"></main>
   <div id="map" role="application" aria-label="行程地图"></div>
 </div>
+<nav class="bnav" id="bnav" aria-label="页面"><a href="#/"><span>🗺</span>路线</a><a href="#/days"><span>📅</span>日程</a><a href="#/charts"><span>📊</span>图表</a></nav>
+<button class="tomap" id="tomap">↑ 看地图</button>
 <dialog class="lb" id="lb" aria-label="城市海报"><button class="x" id="lbx" aria-label="关闭">×</button><img id="lbimg" alt=""></dialog>
 <script src="vendor/leaflet/leaflet.js"></script>
-<script src="trip-data.js"></script>
-<script src="schedule.js"></script>
-<script src="generated.js"></script>
+<script src="trip-data.js?v=9"></script>
+<script src="schedule.js?v=9"></script>
+<script src="generated.js?v=9"></script>
 <script>
 (function(){
 const T = window.TRIP, G = window.GEN || {legs:{},dist:{},days:{}}, SCH = window.SCHEDULE || [];
@@ -306,7 +343,7 @@ function days(focus){
     const hopHtml = x => x ? `<div class="hop"><span></span><span></span><span>${x.ferry?'⛴ 轮渡过海':`🚗 ${fmtH(x.min)} · ${x.km} km · <a href="${nav(llAt(x.a),nameAt(x.a),llAt(x.b),nameAt(x.b))}" target="_blank" rel="noopener">导航</a>`}</span></div>` : '';
     let n = 0;
     h += `<section class="day" id="d-${day.d}" data-d="${day.d}"><header><span class="dn">D${di+1}</span><span><span class="dt">${md(dt)} 周${WD[dt.getDay()]}</span> <span class="dc">${st.city.split(' ')[0]}</span></span>
-      <span class="sum ${dd.min>=240?'long':''}">🚗 ${fmtH(dd.min)} · ${Math.round(dd.km)} km</span></header><ol class="items">`;
+      <span class="sum ${dd.min>=240?'long':''}">🚗 ${fmtH(dd.min)} · ${Math.round(dd.km)} km</span><button class="pill showday" data-showday="${day.d}">🗺 在地图上看这一天</button></header><ol class="items">`;
     if(g.start) h += `<li class="it"><span class="tm"></span><span class="pin none"></span><span class="what" style="color:var(--muted)">从${nameAt(-1)}出发</span></li>` + hopHtml(hopTo(day.items.findIndex((_,i)=>g.pos[i])));
     const fl = day.items.findIndex((_,i)=>g.pos[i]);
     day.items.forEach((it,i)=>{
@@ -338,8 +375,10 @@ function focusDay(d){
 // ---- 图表 ----
 function tipFor(box){
   const tip = document.createElement('div'); tip.className='ttip'; box.appendChild(tip);
-  box.addEventListener('pointermove', e=>{ const g=e.target.closest('[data-tip]'); if(!g){ tip.style.opacity=0; return; }
-    const r=box.getBoundingClientRect(); tip.innerHTML=g.dataset.tip; tip.style.left=(e.clientX-r.left)+'px'; tip.style.top=(e.clientY-r.top-6)+'px'; tip.style.opacity=1; });
+  const move = e => { const g=e.target.closest('[data-tip]'); if(!g){ tip.style.opacity=0; return; }
+    const r=box.getBoundingClientRect(); tip.innerHTML=g.dataset.tip; tip.style.left=Math.min(Math.max(e.clientX-r.left,70),r.width-70)+'px'; tip.style.top=(e.clientY-r.top-6)+'px'; tip.style.opacity=1; };
+  box.addEventListener('pointermove', move);
+  box.addEventListener('pointerdown', move);           // 手机上手指按住柱子也能看到提示
   box.addEventListener('pointerleave', ()=>tip.style.opacity=0);
 }
 function charts(){
@@ -393,7 +432,14 @@ function charts(){
 }
 
 // ---- 路由与事件 ----
-function show(h, title){ $('#panel').innerHTML = h; $('#panel').scrollTop = 0; document.title = title; }
+const mobile = () => matchMedia('(max-width:820px)').matches;
+function show(h, title){
+  $('#panel').innerHTML = h; $('#panel').scrollTop = 0; document.title = title;
+  const a = location.hash.replace(/^#\/?/,'').split('/')[0], cur = a==='days'||a==='charts' ? a : '';
+  document.querySelectorAll('#bnav a').forEach(x=>{ if(x.getAttribute('href')==='#/'+cur) x.setAttribute('aria-current','page'); else x.removeAttribute('aria-current'); });
+  if(mobile()) window.scrollTo(0,0);
+}
+const toMap = () => { window.scrollTo({top:0,behavior:'smooth'}); setTimeout(()=>{ if(window.scrollY>4) window.scrollTo(0,0); },700); };  // 平滑滚动没生效时直接跳回地图
 function go(id){ location.hash = '#/'+(id||''); }
 function render(){
   const path = location.hash.replace(/^#\/?/,''), [a,b] = path.split('/');
@@ -406,15 +452,19 @@ $('#panel').addEventListener('click', e=>{
   const f = e.target.closest('[data-f]'); if(f){ filter=f.dataset.f; render(); return; }
   const pz = e.target.closest('[data-poster]'); if(pz){ $('#lbimg').src='posters/'+pz.dataset.poster+'.webp'; $('#lbimg').alt=pz.getAttribute('aria-label'); $('#lb').showModal(); return; }
   if(e.target.closest('a')) return;
-  const dh = e.target.closest('.day'); if(dh){ focusDay(dh.dataset.d); return; }
+  const sd = e.target.closest('[data-showday]'); if(sd){ focusDay(sd.dataset.showday); toMap(); return; }
+  const dh = e.target.closest('.day'); if(dh){ if(!mobile()) focusDay(dh.dataset.d); return; }
   const sp = e.target.closest('.spot'); if(!sp) return; const j=+sp.dataset.j;
-  spotLayer.eachLayer(m=>{ if(m._j===j){ map.flyTo(m.getLatLng(),Math.max(map.getZoom(),13),{duration:.5}); m.openPopup(); } }); hl(j);
+  spotLayer.eachLayer(m=>{ if(m._j===j){ map.flyTo(m.getLatLng(),Math.max(map.getZoom(),13),{duration:.5}); m.openPopup(); } }); hl(j); if(mobile()) toMap();
 });
 $('#panel').addEventListener('keydown', e=>{ if(e.key==='Enter' && e.target.classList.contains('spot')) e.target.click(); });
 // 海报弹层：× 按钮、Esc（dialog 自带）、点黑色背景都能关
 $('#lbx').onclick = () => $('#lb').close();
 $('#lb').addEventListener('click', e=>{ if(e.target.id==='lb') $('#lb').close(); });
 window.addEventListener('hashchange', ()=>{ filter='all'; render(); });
+$('#tomap').onclick = toMap;
+window.addEventListener('scroll', ()=>$('#tomap').classList.toggle('show', mobile() && window.scrollY > $('#map').offsetHeight + 80), {passive:true});
+let rz; window.addEventListener('resize', ()=>{ clearTimeout(rz); rz=setTimeout(()=>map.invalidateSize(),150); });
 map.fitBounds(allBounds(),{padding:[30,30]});
 render();
 })();
