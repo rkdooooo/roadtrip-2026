@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>苏州到五指山自驾</title>
+<meta name="description" content="2026 年 12 月，从苏州沿海岸线开车回五指山：每站的住处、每日安排和景点车程。">
+<meta name="theme-color" content="#efe9e0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%232e5b44'/><path d='M9 21c4-1 5-9 8-9s3 6 6 6' stroke='%23efe9e0' stroke-width='2.5' fill='none' stroke-linecap='round'/></svg>">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<style>
+:root{
+  /* 配色：Clay and pine（陶土 · 松绿）。字体只用系统字体，国内打开不依赖外网 */
+  --bg:#efe9e0; --panel:#f7f3ec; --chip:#e2d9cb; --line:#dcd2c2; --ink:#22261f; --muted:#5f6158;
+  --accent:#2e5b44; --taikang:#2e5b44; --hotel:#4a6178; --ferry:#2f7f9a; --home:#b07a1f;
+  --elder:#8a5230; --young:#2c7c7a; --both:#5d6b2e; --geo:#b4552d;
+  --serif:"Songti SC","STSong","Noto Serif SC","Source Han Serif SC",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  --ease:cubic-bezier(.2,.8,.2,1); --dur:180ms;
+  --shadow:0 1px 2px rgba(34,38,31,.06),0 6px 20px rgba(34,38,31,.08);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#1b1d19; --panel:#23261f; --chip:#2e3128; --line:#383b32; --ink:#ece6da; --muted:#a5a497;
+  --accent:#6fae8c; --taikang:#6fae8c; --hotel:#8fa6c0; --ferry:#6bb5cf; --home:#e0b04a;
+  --elder:#d39a6a; --young:#5fbfbc; --both:#a9b56a; --geo:#e08a5c; } }
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:15px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.app{display:grid;grid-template-columns:400px 1fr;height:100vh;height:100dvh}
+#panel{overflow-y:auto;border-right:1px solid var(--line);padding:24px 22px 40px}
+#map{height:100%;background:var(--bg)}
+.leaflet-tile-pane{filter:sepia(.16) saturate(.82) contrast(.97)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .leaflet-tile-pane{filter:brightness(.8) sepia(.1) saturate(.8)} }
+h1,h2,h3{font-family:var(--serif);font-weight:700;letter-spacing:-.01em;margin:0}
+h1{font-size:26px;line-height:1.25}
+h2{font-size:24px;line-height:1.2}
+h3{font-size:15px;margin:22px 0 8px}
+.sub{color:var(--muted);font-size:13px;margin-top:4px}
+.stats{display:flex;gap:8px;margin:16px 0 4px}
+.stat{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center}
+.stat b{display:block;font:700 20px/1.2 var(--serif);color:var(--accent);font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+/* 总览列表 */
+.route{list-style:none;margin:18px 0 0;padding:0}
+.leg{font-size:12.5px;color:var(--muted);padding:3px 0 3px 40px;position:relative;font-variant-numeric:tabular-nums}
+.leg::before{content:"";position:absolute;left:15px;top:0;bottom:0;border-left:2px dotted var(--line)}
+.row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:2px 0;
+  transition:transform var(--dur) var(--ease),border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
+button.row:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:var(--shadow)}
+button.row:active{transform:translateY(0) scale(.99)}
+.row.plain{background:transparent;border-style:dashed}
+.num{width:30px;height:30px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff;font:700 13px/1 var(--sans)}
+.t-taikang{background:var(--taikang)} .t-hotel{background:var(--hotel)} .t-ferry{background:var(--ferry)} .t-home{background:var(--home)}
+.row .main{flex:1;min-width:0}
+.row .city{font:700 17px/1.3 var(--serif);display:block}
+.row .base{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.row .when{font-size:12.5px;color:var(--muted);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.row .when b{display:block;color:var(--ink);font-weight:600}
+.chev{color:var(--muted);font-size:20px;line-height:1}
+details{margin-top:24px;border-top:1px solid var(--line);padding-top:12px;font-size:13.5px}
+summary{cursor:pointer;font-family:var(--serif);font-weight:700}
+details ul{padding-left:18px;color:var(--muted)}
+.foot{font-size:12px;color:var(--muted);margin-top:24px}
+/* 城市页 */
+.nav{display:flex;justify-content:space-between;align-items:center;margin:-6px 0 14px;gap:8px}
+.nav button{background:none;border:1px solid var(--line);border-radius:99px;padding:5px 12px;font-size:13px;transition:border-color var(--dur) var(--ease)}
+.nav button:hover{border-color:var(--accent)}
+.nav .pn{display:flex;gap:6px}
+.badge{display:inline-block;font:500 11.5px/1.6 var(--sans);padding:0 7px;border-radius:99px;background:var(--chip);color:var(--muted);margin-left:8px;vertical-align:4px}
+.meta{font-size:13.5px;color:var(--muted);margin-top:6px}
+.meta div{margin-top:2px}
+.note{margin:14px 0 0}
+.days{margin:0;padding:12px 14px 12px 32px;background:var(--panel);border:1px solid var(--line);border-radius:12px;font-size:14px}
+.days li{margin:3px 0}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.filters button{border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:4px 12px;font-size:13px;transition:background-color var(--dur) var(--ease),color var(--dur) var(--ease)}
+.filters button:hover{border-color:var(--accent)}
+.filters button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.filters small{opacity:.7;margin-left:4px}
+.spot{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin:8px 0;cursor:pointer;transition:transform var(--dur) var(--ease),border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
+.spot:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:var(--shadow)}
+.spot.hl{border-color:var(--accent);box-shadow:var(--shadow)}
+.spot .name{font-weight:600}
+.spot .tip{font-size:13.5px;color:var(--muted);margin-top:2px}
+.geo{font-size:13.5px;border-left:3px solid var(--geo);padding:1px 0 1px 9px;margin:7px 0 2px}
+.chip{display:inline-block;font:500 11px/1.65 var(--sans);padding:0 6px;border-radius:4px;color:#fff;margin-right:5px;vertical-align:1px}
+.w-elder{background:var(--elder)} .w-young{background:var(--young)} .w-both{background:var(--both)} .w-geo{background:var(--geo)}
+.foot2{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;font-size:12.5px;flex-wrap:wrap}
+.dist{font-variant-numeric:tabular-nums}
+.dist span{color:var(--muted)}
+.links{display:flex;gap:6px}
+.links a{text-decoration:none;padding:2px 10px;border-radius:99px;border:1px solid var(--line);transition:background-color var(--dur) var(--ease),color var(--dur) var(--ease),border-color var(--dur) var(--ease)}
+.links a:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.links a.xhs{color:#e0243f} .links a.xhs:hover{background:#e0243f;border-color:#e0243f;color:#fff}
+/* 地图标记 */
+.mk{border-radius:50%;color:#fff;font:700 12px/1 var(--sans);display:grid;place-items:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);transition:transform var(--dur) var(--ease),opacity var(--dur) var(--ease)}
+.mk.dim{opacity:.5}
+.mk.on{transform:scale(1.25)}
+.dot{width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 3px rgba(0,0,0,.4)}
+.leaflet-popup-content{font:13.5px/1.55 var(--sans);margin:10px 14px}
+.leaflet-popup-content b{font-family:var(--serif)}
+@media (max-width:820px){
+  .app{grid-template-columns:1fr;grid-template-rows:42vh 1fr}
+  #map{grid-row:1}
+  #panel{grid-row:2;border-right:0;border-top:1px solid var(--line);padding:18px 16px 40px}
+  h1{font-size:23px}
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important} }
+</style>
+</head>
+<body>
+<div class="app">
+  <main id="panel" aria-live="polite"></main>
+  <div id="map" role="application" aria-label="行程地图"></div>
+</div>
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="trip-data.js"></script>
+<script src="generated.js"></script>
+<script>
+(function(){
+const T = window.TRIP, G = window.GEN || {legs:{},dist:{}};
+const S = T.stops, $ = s => document.querySelector(s), enc = encodeURIComponent;
+const WHO = {elder:'伯伯', young:'年轻人', both:'都适合'};
+
+// ---- 日期 ----
+const start = new Date(T.startDate+'T00:00:00');
+const md = d => (d.getMonth()+1)+'/'+d.getDate();
+const WD = '日一二三四五六';
+let off = 0;
+S.forEach(s => { s._in = new Date(start); s._in.setDate(start.getDate()+off); off += s.nights||0; s._out = new Date(start); s._out.setDate(start.getDate()+off); });
+const end = S[S.length-1]._in;
+const cities = S.filter(s => s.spots && s.spots.length);          // 有详情页的站
+const leg = s => G.legs[s.id] || (s.drive && {km:s.drive.km, h:s.drive.h});
+const driveKm = S.reduce((a,s)=>{ const l=G.legs[s.id]; return a + (l && !l.ferry ? l.km : 0); },0);
+
+// ---- 链接 ----
+const xhs = q => `https://www.xiaohongshu.com/search_result?keyword=${enc(q)}`;
+const nav = (a,an,b,bn) => `https://uri.amap.com/navigation?from=${a[0]},${a[1]},${enc(an)}&to=${b[0]},${b[1]},${enc(bn)}&mode=car&coordinate=gaode&callnative=1`;
+const shortBase = s => s.type==='taikang' ? s.name.replace('泰康之家·','') : '住处';
+const who = p => p.who || 'both';
+const match = (p,w) => w==='all' || (w==='geo' ? !!p.geo : who(p)===w || who(p)==='both');
+
+// ---- 地图 ----
+const map = L.map('map',{zoomControl:false});
+L.control.zoom({position:'topright'}).addTo(map);
+L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',{subdomains:'1234',maxZoom:18,attribution:'© 高德地图'}).addTo(map);
+const ll = p => [p[1],p[0]];
+const css = v => getComputedStyle(document.documentElement).getPropertyValue('--'+v).trim();
+const spotLayer = L.layerGroup().addTo(map), stopMk = {};
+S.forEach((s,i)=>{ if(!i) return; const l=G.legs[s.id]; const path=(l&&l.path)||[S[i-1].lnglat,s.lnglat];
+  L.polyline(path.map(ll),{color:css(l&&l.ferry?'ferry':'accent'),weight:4,opacity:.85,dashArray:l&&l.ferry?'6 8':null}).addTo(map); });
+S.forEach((s,i)=>{
+  const icon = L.divIcon({className:'',html:`<div class="mk t-${s.type}" style="width:28px;height:28px">${s.type==='home'?'家':i}</div>`,iconSize:[28,28],iconAnchor:[14,14]});
+  stopMk[s.id] = L.marker(ll(s.lnglat),{icon,zIndexOffset:1000,title:s.city}).addTo(map)
+    .on('click',()=> cities.includes(s) ? go(s.id) : L.popup().setLatLng(ll(s.lnglat)).setContent(`<b>${s.city}</b><br>${s.name}`).openOn(map));
+});
+function markActive(id){
+  Object.entries(stopMk).forEach(([k,m])=>{ const el=m.getElement()&&m.getElement().firstChild; if(!el) return;
+    el.classList.toggle('on',k===id); el.classList.toggle('dim',!!id && k!==id); });
+}
+const allBounds = () => L.latLngBounds(S.map(s=>ll(s.lnglat)));
+
+// ---- 总览 ----
+function overview(){
+  markActive(null); spotLayer.clearLayers(); map.closePopup();
+  map.flyToBounds(allBounds(),{padding:[30,30],duration:.6});
+  const [t1,t2] = T.title.split(' · ');
+  let h = `<h1>${t1}</h1>
+    <div class="sub">${t2?t2+'<br>':''}${start.getFullYear()}.${md(start).replace('/','.')} 出发 · ${end.getFullYear()}.${md(end).replace('/','.')} 到家</div>
+    <div class="stats"><div class="stat"><b>${Math.round((end-start)/864e5)+1}</b><span>天</span></div>
+      <div class="stat"><b>${driveKm.toLocaleString()}</b><span>公里</span></div>
+      <div class="stat"><b>${cities.length}</b><span>个城市</span></div></div>
+    <ol class="route">`;
+  S.forEach((s,i)=>{
+    const l = i && leg(s);
+    if(l) h += `<li class="leg">${l.ferry?'⛴ 过琼州海峡 · 船上约 1.5–2 小时':`🚗 ${l.km} km · ${l.h} 小时`}</li>`;
+    if(s.type==='ferry') return;
+    const when = s.nights ? `<b>${md(s._in)} – ${md(s._out)}</b>${s.nights} 晚` : `<b>${md(s._in)}</b>${i?'到家':'出发'}`;
+    const inner = `<span class="num t-${s.type}">${s.type==='home'?'家':i}</span>
+      <span class="main"><span class="city">${s.city}</span><span class="base">${s.name}</span></span>
+      <span class="when">${when}</span>`;
+    h += `<li>${cities.includes(s) ? `<button class="row" data-go="${s.id}">${inner}<span class="chev" aria-hidden="true">›</span></button>` : `<div class="row plain">${inner}</div>`}</li>`;
+  });
+  h += `</ol><details><summary>出发前要知道</summary><ul>${T.assumptions.concat(T.tips).map(t=>`<li>${t}</li>`).join('')}</ul></details>
+    <div class="foot">路线和车程由 OpenStreetMap 路网预先算好，城市里的时间已加三成余量。底图 © 高德地图。</div>`;
+  $('#panel').innerHTML = h; $('#panel').scrollTop = 0;
+  document.title = '苏州到五指山自驾';
+}
+
+// ---- 城市页 ----
+let filter = 'all';
+function city(s){
+  const i = S.indexOf(s), ci = cities.indexOf(s), prev = cities[ci-1], next = cities[ci+1];
+  const l = leg(s), from = S[i-1], D = G.dist[s.id] || [];
+  const count = w => s.spots.filter(p=>match(p,w)).length;
+  const F = [['all','全部'],['elder','伯伯'],['young','年轻人'],['geo','地理']].filter(([w])=>count(w));
+  if(!F.some(([w])=>w===filter)) filter='all';
+  let h = `<div class="nav"><button data-go="">← 全程</button><span class="pn">
+      ${prev?`<button data-go="${prev.id}" aria-label="上一站 ${prev.city}">‹ ${prev.city}</button>`:''}
+      ${next?`<button data-go="${next.id}" aria-label="下一站 ${next.city}">${next.city} ›</button>`:''}</span></div>
+    <h2>${i}. ${s.city}${s.status?`<span class="badge">${s.status}</span>`:''}</h2>
+    <div class="meta"><div>${md(s._in)}（周${WD[s._in.getDay()]}）– ${md(s._out)} · ${s.nights} 晚 · ${s.name}</div>
+      ${s.addr?`<div>📍 ${s.addr}</div>`:''}
+      ${l?`<div>🚗 从${from.city.split(' ')[0]}过来 ${l.km} km · ${l.h} 小时 · <a href="${nav(from.lnglat,from.name,s.lnglat,s.name)}" target="_blank" rel="noopener">高德导航</a></div>`:''}</div>
+    ${s.note?`<p class="note">${s.note}</p>`:''}
+    ${s.days?`<h3>每日安排</h3><ol class="days">${s.days.map(d=>`<li>${d}</li>`).join('')}</ol>`:''}
+    <h3>景点</h3>
+    <div class="filters" role="group" aria-label="按人群筛选">${F.map(([w,n])=>`<button data-f="${w}" class="${filter===w?'on':''}" aria-pressed="${filter===w}">${n}<small>${count(w)}</small></button>`).join('')}</div>`;
+  s.spots.forEach((p,j)=>{ if(!match(p,filter)) return; const d=D[j];
+    h += `<div class="spot" data-j="${j}" tabindex="0">
+      <div>${p.geo?'<span class="chip w-geo">地理</span>':''}<span class="chip w-${who(p)}">${WHO[who(p)]}</span><span class="name">${p.name}</span></div>
+      <div class="tip">${p.tip}</div>${p.geo?`<div class="geo">${p.geo}</div>`:''}
+      <div class="foot2"><span class="dist">${d?(d.km<1?'就在附近':`${d.km} km · ${d.min} 分钟`)+`<span> 离${shortBase(s)}${d.est?'（估）':''}</span>`:''}</span>
+        <span class="links"><a class="xhs" href="${xhs(s.city+' '+p.name.replace(/（.*?）/g,''))}" target="_blank" rel="noopener">小红书</a>
+        <a href="${nav(s.lnglat,s.name,p.lnglat,p.name)}" target="_blank" rel="noopener">导航</a></span></div></div>`; });
+  $('#panel').innerHTML = h; $('#panel').scrollTop = 0;
+  document.title = s.city+' · 苏州到五指山自驾';
+  markActive(s.id); spotLayer.clearLayers(); map.closePopup();
+  const pts = [s.lnglat];
+  s.spots.forEach((p,j)=>{ if(!match(p,filter)) return; const d=D[j]; if(!d || d.km<=70) pts.push(p.lnglat);
+    const m = L.marker(ll(p.lnglat),{icon:L.divIcon({className:'',html:`<div class="dot" style="background:var(--${p.geo?'geo':who(p)})"></div>`,iconSize:[18,18],iconAnchor:[9,9]}),title:p.name})
+      .bindPopup(`<b>${p.name}</b>${d?`<br>${d.km} km · ${d.min} 分钟`:''}`).on('click',()=>hl(j)).addTo(spotLayer); m._j=j; });
+  map.flyToBounds(L.latLngBounds(pts.map(ll)),{padding:[40,40],maxZoom:13,duration:.6});
+}
+function hl(j){ document.querySelectorAll('.spot').forEach(e=>e.classList.toggle('hl',+e.dataset.j===j));
+  const el=document.querySelector(`.spot[data-j="${j}"]`); if(el) el.scrollIntoView({block:'nearest',behavior:'smooth'}); }
+
+// ---- 路由与事件 ----
+function go(id){ location.hash = id ? '#/'+id : '#/'; }
+function render(){ const id = location.hash.replace(/^#\/?/,''); const s = cities.find(c=>c.id===id); s ? city(s) : overview(); }
+$('#panel').addEventListener('click', e=>{
+  const g = e.target.closest('[data-go]'); if(g){ go(g.dataset.go); return; }
+  const f = e.target.closest('[data-f]'); if(f){ filter=f.dataset.f; render(); return; }
+  if(e.target.closest('a')) return;
+  const sp = e.target.closest('.spot'); if(!sp) return; const j=+sp.dataset.j;
+  spotLayer.eachLayer(m=>{ if(m._j===j){ map.flyTo(m.getLatLng(),Math.max(map.getZoom(),13),{duration:.5}); m.openPopup(); } }); hl(j);
+});
+$('#panel').addEventListener('keydown', e=>{ if(e.key==='Enter' && e.target.classList.contains('spot')) e.target.click(); });
+window.addEventListener('hashchange', ()=>{ filter='all'; render(); });
+map.fitBounds(allBounds(),{padding:[30,30]});
+render();
+})();
+</script>
+</body>
+</html>
