@@ -106,6 +106,8 @@ details ul{padding-left:18px;color:var(--muted)}
 .spot.hl{border-color:var(--accent);box-shadow:var(--shadow)}
 .spot .name{font-weight:600}
 .spot .tip{font-size:13.5px;color:var(--muted);margin-top:2px}
+.spot .tip.park{background:#eef5f1;border-left:3px solid #0f5c46;border-radius:6px;padding:6px 9px;margin-top:6px;color:#24463a}
+.spot .tip.park a{color:#0f5c46;font-weight:600}
 .geo{font-size:13.5px;border-left:3px solid var(--geo);padding:1px 0 1px 9px;margin:7px 0 2px}
 .chip{display:inline-block;font:500 11px/1.65 var(--sans);padding:0 6px;border-radius:4px;color:#fff;margin-right:5px;vertical-align:1px}
 .w-elder{background:var(--elder)} .w-young{background:var(--young)} .w-both{background:var(--both)}
@@ -169,13 +171,26 @@ dialog.lb .x{position:absolute;top:-14px;right:-14px;width:40px;height:40px;bord
 .mk.dim{opacity:.45}
 .mk.on{transform:scale(1.25)}
 #map-shell{position:relative}
-.map-marker{display:grid;place-items:center}
+.map-marker{display:grid;place-items:center;position:relative}
 .map-marker span,.spot-no{display:grid;place-items:center;border-radius:50%;background:#2e5b44;color:#fff;font:700 16px/1 var(--sans)}
 .map-marker span{width:36px;height:36px;border:3px solid #fff;box-shadow:0 2px 6px #0007}
 .map-marker.history span,.spot-no.history{background:#8b3e1e}
 .map-marker.scenic span,.spot-no.scenic{background:#18567c}
+.map-marker.home span{background:#5b4b8a}
 .map-marker.active span{background:#202823;outline:3px solid #eab85f;scale:1.08}
 .spot-no{display:inline-grid;width:25px;height:25px;margin-right:7px;font-size:13px;vertical-align:middle}
+.p-badge{position:absolute;right:-3px;bottom:-3px;width:18px;height:18px;border-radius:5px;background:#0f5c46;color:#fff;font:700 11px/18px var(--sans);text-align:center;border:2px solid #fff;font-style:normal;box-shadow:0 1px 3px #0004}
+.map-legend{position:absolute;left:12px;top:12px;z-index:800;display:flex;flex-wrap:wrap;gap:4px 10px;padding:7px 10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);font:12.5px/1.5 var(--sans);color:var(--muted);max-width:calc(100% - 70px)}
+.map-legend[hidden]{display:none}
+.map-legend span{display:inline-flex;align-items:center;gap:5px}
+.map-legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.map-legend i.home{background:#5b4b8a}
+.map-legend i.spot{background:#2e5b44}
+.map-legend i.p{width:13px;height:13px;border-radius:4px;background:#0f5c46}
+.pop-d{margin:4px 0 2px;color:#3a3a3a}
+.pop-p{background:#eef5f1;border-radius:7px;padding:6px 8px;margin:6px 0 2px;color:#1d3a2d}
+.pop-p b{font-family:var(--sans)}
+.pop-l{display:flex;flex-wrap:wrap;gap:12px;margin-top:4px}
 .map-controls{position:absolute;z-index:900;bottom:28px;left:12px;right:12px;max-width:390px;display:grid;gap:6px;padding:10px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
 .map-controls[hidden],.map-controls label[hidden],.map-controls small[hidden]{display:none}
 .map-controls label{display:grid;grid-template-columns:4em minmax(0,1fr);gap:8px;align-items:center;font-size:14px}
@@ -184,12 +199,13 @@ dialog.lb .x{position:absolute;top:-14px;right:-14px;width:40px;height:40px;bord
 .map-popup-link{display:inline-flex;align-items:center;min-height:44px;font-weight:600}
 .leaflet-popup-content{font:13.5px/1.55 var(--sans);margin:10px 14px}
 .leaflet-popup-content b{font-family:var(--serif)}
-/* ---- 手机：整页滚动、底部导航、大字号、大按钮（长辈用手机看） ---- */
+/* ---- 手机：整页滚动、底部导航、大字号、大按钮 ---- */
 .bnav{display:none}
 @media (max-width:820px){
   body{font-size:17px;line-height:1.7}
   .app{display:block;height:auto}
   .map-controls{bottom:calc(28px + env(safe-area-inset-bottom))}
+  .map-legend{top:calc(64px + env(safe-area-inset-top));left:calc(12px + env(safe-area-inset-left));max-width:calc(100% - 24px);font-size:13px}
   #map-shell{visibility:hidden;position:fixed;inset:0;z-index:1100;background:var(--bg)}
   body.map-open{overflow:hidden}
   body.map-open #map-shell{visibility:visible}
@@ -250,6 +266,7 @@ dialog.lb .x{position:absolute;top:-14px;right:-14px;width:40px;height:40px;bord
       <label id="map-point-label">找地点<select id="map-point"><option value="">按编号或名称找地点</option></select></label>
       <small id="map-line-key" hidden>实线：路网估算 · 虚线：轮渡</small>
     </div>
+    <div class="map-legend" id="map-legend" hidden></div>
     <button type="button" class="pill map-close" id="map-close">← 返回行程</button>
   </div>
 </div>
@@ -322,6 +339,7 @@ let selectRoute;
 function clearPoints(){
   spotLayer.clearLayers();
   pointMarkers.length = 0;
+  $('#map-legend').hidden = true;
   refreshPoints();
   map.closePopup();
 }
@@ -344,9 +362,24 @@ function refreshPoints(){
   const picker = $('#map-point');
   picker.replaceChildren(new Option('按编号或名称找地点', ''));
   pointMarkers.forEach(({number,title},i)=>picker.add(new Option(number+' · '+title, String(i))));
+  const lots = pointMarkers.map((p,i)=>({p,i})).filter(x=>x.p.parkName);
+  if(lots.length){
+    const grp = document.createElement('optgroup');
+    grp.label = '有停车场的地点';
+    lots.forEach(({p,i})=>grp.appendChild(new Option('P · '+p.title+'（'+p.parkName+'）', String(i))));
+    picker.appendChild(grp);
+  }
   $('#map-point-label').hidden = !pointMarkers.length;
   $('#map-controls').hidden = $('#map-day-label').hidden && !pointMarkers.length;
   $('#map-line-key').hidden = true;
+}
+function renderLegend(s){
+  const el = $('#map-legend');
+  if(!s){ el.hidden = true; el.replaceChildren(); return; }
+  const hasPark = pointMarkers.some(p=>p.parkName);
+  const hasSpots = pointMarkers.some(p=>p.spotIndex!==undefined);
+  el.innerHTML = `<span><i class="home"></i>住处</span>${hasSpots?'<span><i class="spot"></i>地点（编号同左侧列表）</span>':''}${hasPark?'<span><i class="p"></i>有停车场（点开看导航）</span>':''}`;
+  el.hidden = false;
 }
 function activatePoint(index){
   $('#map-point').value = String(index);
@@ -355,17 +388,20 @@ function activatePoint(index){
     marker.setZIndexOffset(i===index?4000:1800);
   });
 }
-function addPoint(llPair, number, title, detail, destination, tone='', onSelect){
+function addPoint(llPair, number, title, detail, targets, opts={}){
+  const {tone='', parkName='', parkFee='', onSelect} = opts;
   const index = pointMarkers.length;
+  const links = (targets||[]).map(t=>`<a class="map-popup-link" href="${amapQ(t.q)}" target="_blank" rel="noopener">${t.label}</a>`).join('');
+  const html = `<b>${number} · ${title}</b>${detail?`<div class="pop-d">${detail}</div>`:''}${parkName?`<div class="pop-p">🅿️ <b>${parkName}</b>${parkFee?`<br>${parkFee}`:''}</div>`:''}${links?`<div class="pop-l">${links}</div>`:''}`;
   const marker = L.marker(ll(llPair),{
-    icon:L.divIcon({className:'map-marker '+tone,html:`<span aria-hidden="true">${number}</span>`,iconSize:[44,44],iconAnchor:[22,22],popupAnchor:[0,-19],tooltipAnchor:[0,-20]}),
+    icon:L.divIcon({className:'map-marker '+tone,html:`<span aria-hidden="true">${number}</span>${parkName?'<i class="p-badge">P</i>':''}`,iconSize:[44,44],iconAnchor:[22,22],popupAnchor:[0,-19],tooltipAnchor:[0,-20]}),
     title, autoPanOnFocus:false, zIndexOffset:1800
   }).bindTooltip(title,{direction:'top'})
-    .bindPopup(`<b>${number} · ${title}</b>${detail?'<br>'+detail:''}<br><a class="map-popup-link" href="${amapQ(destination)}" target="_blank" rel="noopener">打开高德搜索</a>`,{maxWidth:250})
+    .bindPopup(html,{maxWidth:260})
     .addTo(spotLayer);
   marker.getElement()?.setAttribute('aria-label',number+' '+title);
   marker.on('popupopen',()=>{ activatePoint(index); onSelect?.(); });
-  pointMarkers.push({marker,number,title});
+  pointMarkers.push({marker,number,title,parkName});
 }
 function focusPoint(index){
   const point = pointMarkers[index];
@@ -396,7 +432,7 @@ function overview(){
     h += `<li>${stayStops.includes(s) ? `<button class="row" data-go="${s.id}">${inner}<span class="chev" aria-hidden="true">›</span></button>` : `<div class="row plain">${inner}</div>`}</li>`;
   });
   h += `</ol><details><summary>出发前要知道</summary><ul>${T.assumptions.concat(T.tips).map(t=>`<li>${t}</li>`).join('')}</ul></details>
-    ${S.some(x=>x.nav||x.parking)?`<details><summary>住处 / 途经点：导航与停车</summary><ul>${S.filter(x=>x.nav||x.parking).map(x=>`<li><b>${x.city} · ${x.name}</b>${st(x.status)}：导航「${x.nav}」${x.navll?`（${x.navll[1]}, ${x.navll[0]}）`:''}${x.parking?'；停车：'+x.parking:''}${x.hours?'；'+x.hours:''}${x.ticket?'；'+x.ticket:''}${x.elder?'；'+x.elder:''}</li>`).join('')}</ul></details>`:''}
+    ${S.some(x=>x.nav||x.park)?`<details><summary>住处 / 途经点：导航与停车</summary><ul>${S.filter(x=>x.nav||x.park).map(x=>`<li><b>${x.city} · ${x.name}</b>${st(x.status)}：导航「${x.nav}」${x.navll?`（${x.navll[1]}, ${x.navll[0]}）`:''}${x.park?`；停车：${x.park.name}${x.park.fee?`（${x.park.fee}）`:''} · <a href="${amapQ(x.park.nav)}" target="_blank" rel="noopener">高德搜停车场</a>`:''}${x.hours?'；'+x.hours:''}${x.ticket?'；'+x.ticket:''}</li>`).join('')}</ul></details>`:''}
     <div class="foot">路线与车程为 OSRM 路网估算（长途 +15% 余量、城市 +30%），不含实时路况与过路费。厦门、汕头、深圳的日期和住宿已确认，但每日游玩待规划，页面不列早期候选景点。园区 / 景点坐标为公开地图检索参考，请按 POI 名称复核入口与停车收费。底图 © 高德地图。城市海报仿照 maptoposter（MIT）的风格绘制，数据 © OpenStreetMap contributors，瓦片来自 OpenFreeMap。</div>`;
   show(h, '苏州到五指山自驾');
 }
@@ -418,7 +454,7 @@ function city(s){
       ${s.lodging?`<div>🛏 住宿：${s.lodging}</div>`:''}
       ${s.addr?`<div>📍 ${s.addr} · <a href="${amapQ(s.nav || s.name)}" target="_blank" rel="noopener">高德搜索</a></div>`:''}
       ${s.nav?`<div>🧭 导航：${s.nav}${s.navll?`（${s.navll[1]}, ${s.navll[0]}）`:''} · <a href="${amapQ(s.nav)}" target="_blank" rel="noopener">高德搜索</a></div>`:''}
-      ${s.parking?`<div>🅿️ ${s.parking}</div>`:''}
+      ${s.park?`<div>🅿️ 停车：${s.park.name}${s.park.fee?` · ${s.park.fee}`:''}${s.park.note?` · ${s.park.note}`:''} · <a href="${amapQ(s.park.nav)}" target="_blank" rel="noopener">高德搜停车场</a></div>`:''}
       ${l?`<div>🚗 从${from.city.split(' ')[0]}过来 ${l.km} km · ${l.h} 小时${s.drive&&s.drive.waypoints?' · '+s.drive.via:''} · <a href="${amapQ(s.nav || s.name)}" target="_blank" rel="noopener">高德搜索</a></div>`:''}</div>
     ${s.note&&!s.planning?`<p class="note">${s.note}</p>`:''}
     ${s.planning?`<div class="planning"><b>每日游玩：${s.planning}</b><p>${s.note}</p><p>页面暂不列景点，避免把早期搜集的候选写成确定安排；确定后再补地点、预约和车程。</p></div>`:''}
@@ -429,7 +465,7 @@ function city(s){
   s.spots.forEach((p,j)=>{ if(!match(p,filter)) return; const d=D[j];
     h += `<div class="spot" data-j="${j}" tabindex="0">
       <div><span class="spot-no ${pointTone(p)}">${j+1}</span>${p.geo?'<span class="chip w-geo">地理</span>':''}<span class="chip w-${who(p)}">${WHO[who(p)]}</span><span class="name">${p.name}</span>${st(p.status)}${p.timing?`<span class="badge">${p.timing}</span>`:''}</div>
-      <div class="tip">${p.tip}</div>${p.hours?`<div class="tip">🕒 ${p.hours}</div>`:''}${p.nav?`<div class="tip">🧭 导航：${p.nav}${p.navll?`（${p.navll[1]}, ${p.navll[0]}）`:''} · <a href="${amapQ(p.nav)}" target="_blank" rel="noopener">高德搜索</a> · 腾讯地图搜「${p.nav}」</div>`:''}${p.parking?`<div class="tip">🅿️ ${p.parking}</div>`:''}${p.ticket?`<div class="tip">🎫 ${p.ticket}</div>`:''}${p.elder?`<div class="tip">👵 ${p.elder}</div>`:''}${p.url?`<div class="tip"><a href="${p.url}" target="_blank" rel="noopener">查看地点 / 信息来源</a></div>`:''}${p.geo?`<div class="geo">${p.geo}</div>`:''}
+      <div class="tip">${p.tip}</div>${p.hours?`<div class="tip">🕒 ${p.hours}</div>`:''}${p.nav?`<div class="tip">🧭 导航：${p.nav}${p.navll?`（${p.navll[1]}, ${p.navll[0]}）`:''} · <a href="${amapQ(p.nav)}" target="_blank" rel="noopener">高德搜索</a></div>`:''}${p.park?`<div class="tip park">🅿️ <b>${p.park.name}</b>${p.park.fee?` · ${p.park.fee}`:''}<br>导航「${p.park.nav}」 · <a href="${amapQ(p.park.nav)}" target="_blank" rel="noopener">高德搜停车场</a>${p.park.note?`<br>${p.park.note}`:''}</div>`:''}${p.ticket?`<div class="tip">🎫 ${p.ticket}</div>`:''}${(p.info||[]).map(t=>`<div class="tip">📌 ${t}</div>`).join('')}${p.url?`<div class="tip"><a href="${p.url}" target="_blank" rel="noopener">查看地点 / 信息来源</a></div>`:''}${p.geo?`<div class="geo">${p.geo}</div>`:''}
       <div class="foot2"><span class="dist">${d?(d.km<1?'就在附近':`${d.km} km · ${d.min} 分钟`)+`<span> 离${shortBase(s)}${d.est?'（估）':''}</span>`:''}</span>
         <span class="links"><a class="xhs" href="${xhs(s.city+' '+p.name.replace(/（.*?）/g,''))}" target="_blank" rel="noopener">小红书</a>
         <a href="${amapQ(p.nav || p.name)}" target="_blank" rel="noopener">高德搜索</a></span></div></div>`; });
@@ -446,15 +482,26 @@ function cityMap(s){
   $('#map-day').value = '';
   markActive(s.id);
   routeLayer.eachLayer(l=>l.setStyle({opacity:.18}));
-  const pts = [s.lnglat];
+  const pts = [];
+  // 住处：单独标记，方便看当天从哪出发
+  const homeDetail = [s.addr, s.lodging?`住宿：${s.lodging}`:'', s.park?`🅿️ ${s.park.name}${s.park.fee?` · ${s.park.fee}`:''}`:''].filter(Boolean).join('<br>');
+  const homeTargets = [{label:'高德搜住处',q:s.nav||s.name}];
+  if(s.park) homeTargets.push({label:'高德搜停车场',q:s.park.nav});
+  addPoint(s.lnglat,'住',s.name,homeDetail,homeTargets,{tone:'home'});
+  pointMarkers.at(-1).isHome = true;
+  pts.push(s.lnglat);   // 与下面一致，最后统一用 ll() 转成 [lat,lng]
   s.spots.forEach((p,j)=>{
     if(!match(p,filter)) return;
     pts.push(p.lnglat);
-    addPoint(p.lnglat,j+1,p.name,p.hours || p.tip,p.nav || p.name,pointTone(p),()=>hl(j));
+    const detail = [p.hours?`🕒 ${p.hours}`:'', p.ticket?`🎫 ${p.ticket}`:'', p.tip].filter(Boolean).join('<br>');
+    const targets = [{label:'高德搜景点',q:p.nav||p.name}];
+    if(p.park) targets.push({label:'高德搜停车场',q:p.park.nav});
+    addPoint(p.lnglat,j+1,p.name,detail,targets,{tone:pointTone(p),parkName:p.park?p.park.name:'',parkFee:p.park?p.park.fee:'',onSelect:()=>hl(j)});
     pointMarkers.at(-1).spotIndex = j;
   });
   refreshPoints();
-  fitMap(L.latLngBounds(pts.map(ll)),{paddingTopLeft:[34,56],paddingBottomRight:[34,150],maxZoom:14,duration:.45});
+  renderLegend(s);
+  fitMap(L.latLngBounds(pts.map(ll)),{paddingTopLeft:[34,64],paddingBottomRight:[34,170],maxZoom:pts.length>1?14:11,duration:.45});
 }
 function hl(j){
   document.querySelectorAll('.spot').forEach(e=>e.classList.toggle('hl',+e.dataset.j===j));
@@ -545,12 +592,14 @@ function focusDay(d){
       existing.number += '·'+number;
       existing.details.push(it.t+' '+title);
     } else {
-      places.set(key,{ll:p.ll,number:String(number),title:target?.name || title,details:[it.t+' '+title],destination:target?.nav || target?.name || title});
+      places.set(key,{ll:p.ll,number:String(number),title:target?.name || title,details:[it.t+' '+title],destination:target?.nav || target?.name || title,parkName:target?.park?.name || '',parkNav:target?.park?.nav || '',parkFee:target?.park?.fee || ''});
     }
   });
   for(const p of places.values()){
     pts.push(ll(p.ll));
-    addPoint(p.ll,p.number,p.title,p.details.join('<br>'),p.destination);
+    const targets = [{label:'高德搜地点',q:p.destination}];
+    if(p.parkName) targets.push({label:'高德搜停车场',q:p.parkNav});
+    addPoint(p.ll,p.number,p.title,p.details.join('<br>'),targets,{parkName:p.parkName,parkFee:p.parkFee});
   }
   refreshPoints();
   $('#map-line-key').hidden = !g.hops.length;
