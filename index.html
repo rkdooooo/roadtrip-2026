@@ -31,7 +31,13 @@ button{font:inherit;color:inherit;cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 .app{display:grid;grid-template-columns:420px 1fr;height:100vh;height:100dvh}
 #panel{overflow-y:auto;border-right:1px solid var(--line);padding:0 22px 40px}
+#map-shell{min-width:0;min-height:0}
 #map{height:100%;background:var(--bg)}
+.map-close{display:none}
+.date-jump{display:flex;align-items:center;gap:10px;margin:12px 0;font-size:14px;color:var(--muted)}
+.date-jump select{min-height:44px;min-width:0;flex:1;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:0 12px}
+.it .what{min-width:0;overflow-wrap:anywhere}
+.it .place-link{color:var(--accent);display:inline-flex;align-items:center;min-height:44px;padding-inline:6px;margin-inline-start:6px;font-size:14px}
 .leaflet-tile-pane{filter:sepia(.16) saturate(.82) contrast(.97)}
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .leaflet-tile-pane{filter:brightness(.8) sepia(.1) saturate(.8)} }
 h1,h2,h3{font-family:var(--serif);font-weight:700;letter-spacing:-.01em;margin:0}
@@ -166,19 +172,25 @@ dialog.lb .x{position:absolute;top:-14px;right:-14px;width:40px;height:40px;bord
 .leaflet-popup-content{font:13.5px/1.55 var(--sans);margin:10px 14px}
 .leaflet-popup-content b{font-family:var(--serif)}
 /* ---- 手机：整页滚动、底部导航、大字号、大按钮（长辈用手机看） ---- */
-.bnav,.tomap,.showday{display:none}
+.bnav,.showday{display:none}
 @media (max-width:820px){
   body{font-size:17px;line-height:1.7}
   .app{display:block;height:auto}
-  #map{height:38vh;min-height:240px;border-bottom:1px solid var(--line)}
+  #map-shell{visibility:hidden;position:fixed;inset:0;z-index:1100;background:var(--bg)}
+  body.map-open{overflow:hidden}
+  body.map-open #map-shell{visibility:visible}
+  .map-close{display:flex;align-items:center;position:absolute;top:calc(12px + env(safe-area-inset-top));left:calc(12px + env(safe-area-inset-left));z-index:1001;background:var(--panel);box-shadow:var(--shadow)}
+  #map .leaflet-top{top:env(safe-area-inset-top)}
+  #map .leaflet-right{right:env(safe-area-inset-right)}
+  #map .leaflet-bottom{bottom:env(safe-area-inset-bottom)}
+  .poster img{max-height:180px;object-fit:cover}
+  .date-jump{font-size:16px}
   #panel{overflow:visible;border:0;padding:4px 16px calc(96px + env(safe-area-inset-bottom))}
   .tabs{display:none}
   .bnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:1000;background:var(--panel);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom));box-shadow:0 -2px 12px rgba(0,0,0,.06)}
-  .bnav a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:52px;text-decoration:none;color:var(--muted);font-size:15px;border-radius:12px}
-  .bnav a span{font-size:20px;line-height:1.1}
+  .bnav a,.bnav button{border:0;background:transparent;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:52px;text-decoration:none;color:var(--muted);font-size:15px;border-radius:12px}
+  .bnav a span,.bnav button span{font-size:20px;line-height:1.1}
   .bnav a[aria-current="page"]{color:var(--accent);font-weight:700;background:var(--chip)}
-  .tomap{position:fixed;right:14px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:1000;border:0;border-radius:99px;padding:12px 18px;background:var(--ink);color:var(--panel);font-size:16px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
-  .tomap.show{display:block}
   h1{font-size:26px} h2{font-size:25px} h3{font-size:18px}
   .sub,.meta,.it .what div,.spot .tip,.geo,.day .dc,.hop,.leg,.row .base,.row .when,.foot2,.cap{font-size:15px}
   .stat b{font-size:22px} .stat span{font-size:13px}
@@ -207,7 +219,7 @@ dialog.lb .x{position:absolute;top:-14px;right:-14px;width:40px;height:40px;bord
   .leaflet-control-zoom a{width:40px!important;height:40px!important;line-height:40px!important}
 }
 @media print{
-  .app{display:block;height:auto} #map,.tabs,.toolbar button,.poster,.links{display:none!important}
+  .app{display:block;height:auto} #map-shell,.bnav,.date-jump,.tabs,.toolbar button,.showday,.place-link,.poster,.links{display:none!important}
   #panel{overflow:visible;border:0} .day{break-inside:avoid;box-shadow:none}
   body{background:#fff;color:#000}
 }
@@ -217,10 +229,12 @@ dialog.lb .x{position:absolute;top:-14px;right:-14px;width:40px;height:40px;bord
 <body>
 <div class="app">
   <main id="panel" aria-live="polite"></main>
-  <div id="map" role="application" aria-label="行程地图"></div>
+  <div id="map-shell">
+    <div id="map" role="application" aria-label="行程地图"></div>
+    <button type="button" class="pill map-close" id="map-close">← 返回行程</button>
+  </div>
 </div>
-<nav class="bnav" id="bnav" aria-label="页面"><a href="#/"><span>🗺</span>路线</a><a href="#/days"><span>📅</span>日程</a><a href="#/charts"><span>📊</span>图表</a></nav>
-<button class="tomap" id="tomap">↑ 看地图</button>
+<nav class="bnav" id="bnav" aria-label="页面"><a href="#/"><span>🗺</span>路线</a><a href="#/days"><span>📅</span>日程</a><a href="#/charts"><span>📊</span>图表</a><button type="button" id="map-open" aria-controls="map-shell" aria-expanded="false"><span>📍</span>地图</button></nav>
 <dialog class="lb" id="lb" aria-label="城市海报"><button class="x" id="lbx" aria-label="关闭">×</button><img id="lbimg" alt=""></dialog>
 <script src="vendor/leaflet/leaflet.js"></script>
 <script src="trip-data.js?v=11"></script>
@@ -253,7 +267,6 @@ const fmtH = m => m<60 ? m+' 分钟' : (Math.round(m/6)/10)+' 小时';
 // ---- 链接 ----
 const xhs = q => `https://www.xiaohongshu.com/search_result?keyword=${enc(q)}`;
 const amapQ = q => `https://uri.amap.com/search?keyword=${enc(q)}&callnative=1`;
-const nav = (a,an,b,bn) => `https://uri.amap.com/search?keyword=${enc(bn)}&city=${enc(bn)}&callnative=1`;
 const shortBase = s => s.type==='taikang' ? s.name.replace('泰康之家·','') : '住处';
 const who = p => p.who || 'both';
 const match = (p,w) => w==='all' || (w==='geo' ? !!p.geo : who(p)===w || who(p)==='both');
@@ -263,10 +276,18 @@ const map = L.map('map',{zoomControl:false});
 L.control.zoom({position:'topright'}).addTo(map);
 L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',{subdomains:'1234',maxZoom:18,attribution:'© 高德地图'}).addTo(map);
 const ll = p => [p[1],p[0]];
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+function fitMap(bounds, options){
+  if(reduceMotion.matches || (mobile() && !document.body.classList.contains('map-open'))) {
+    map.fitBounds(bounds,{...options,animate:false});
+  } else {
+    map.flyToBounds(bounds,options);
+  }
+}
 const css = v => getComputedStyle(document.documentElement).getPropertyValue('--'+v).trim();
 const routeLayer = L.layerGroup().addTo(map), spotLayer = L.layerGroup().addTo(map), stopMk = {};
 S.forEach((s,i)=>{ if(!i) return; const l=G.legs[s.id]; const path=(l&&l.path)||[S[i-1].lnglat,s.lnglat];
-  L.polyline(path.map(ll),{color:css(l&&l.ferry?'ferry':'accent'),weight:4,opacity:.85,dashArray:'6 8'}).addTo(routeLayer); });
+  L.polyline(path.map(ll),{color:css(l&&l.ferry?'ferry':'accent'),weight:4,opacity:.85,dashArray:!l?.path||l.ferry?'6 8':null}).addTo(routeLayer); });
 S.forEach((s,i)=>{
   const icon = L.divIcon({className:'',html:`<div class="mk t-${s.type}" style="width:28px;height:28px">${s.type==='home'?'家':i}</div>`,iconSize:[28,28],iconAnchor:[14,14]});
   stopMk[s.id] = L.marker(ll(s.lnglat),{icon,zIndexOffset:1000,title:s.city}).addTo(map)
@@ -283,7 +304,7 @@ const tabs = cur => `<nav class="tabs" aria-label="页面">${[['','路线'],['da
 
 // ---- 路线（总览） ----
 function overview(){
-  resetMap(); map.flyToBounds(allBounds(),{padding:[30,30],duration:.6});
+  resetMap(); fitMap(allBounds(),{padding:[30,30],duration:.6});
   const [t1,t2] = T.title.split(' · ');
   let h = tabs('') + `<h1>${t1}</h1><div class="sub">${t2?t2+'<br>':''}${start.getFullYear()}.${md(start).replace('/','.')} 出发 · ${end.getFullYear()}.${md(end).replace('/','.')} 过海</div>
     <div class="stats"><div class="stat"><b>${Math.round((end-start)/864e5)+1}</b><span>天</span></div>
@@ -300,7 +321,7 @@ function overview(){
   });
   h += `</ol><details><summary>出发前要知道</summary><ul>${T.assumptions.concat(T.tips).map(t=>`<li>${t}</li>`).join('')}</ul></details>
     ${S.some(x=>x.nav||x.parking)?`<details><summary>住处 / 途经点：导航与停车</summary><ul>${S.filter(x=>x.nav||x.parking).map(x=>`<li><b>${x.city} · ${x.name}</b>${st(x.status)}：导航「${x.nav}」${x.navll?`（${x.navll[1]}, ${x.navll[0]}）`:''}${x.parking?'；停车：'+x.parking:''}${x.hours?'；'+x.hours:''}${x.ticket?'；'+x.ticket:''}${x.elder?'；'+x.elder:''}</li>`).join('')}</ul></details>`:''}
-    <div class="foot">地图连线仅为站点示意，非实际道路；路线与车程为 OSRM 路网估算（长途 +15% 余量、城市 +30%），不含实时路况与过路费。厦门、汕头、深圳的日期和住宿已确认，但每日游玩待规划，页面不列早期候选景点。园区 / 景点坐标为公开地图检索参考，请按 POI 名称复核入口与停车收费。底图 © 高德地图。城市海报仿照 maptoposter（MIT）的风格绘制，数据 © OpenStreetMap contributors，瓦片来自 OpenFreeMap。</div>`;
+    <div class="foot">路线与车程为 OSRM 路网估算（长途 +15% 余量、城市 +30%），不含实时路况与过路费。厦门、汕头、深圳的日期和住宿已确认，但每日游玩待规划，页面不列早期候选景点。园区 / 景点坐标为公开地图检索参考，请按 POI 名称复核入口与停车收费。底图 © 高德地图。城市海报仿照 maptoposter（MIT）的风格绘制，数据 © OpenStreetMap contributors，瓦片来自 OpenFreeMap。</div>`;
   show(h, '苏州到五指山自驾');
 }
 
@@ -319,10 +340,10 @@ function city(s){
     <h2>${i}. ${s.city}${st(s.status)}${s.planning?st('planning'):''}</h2>
     <div class="meta"><div>${md(s._in)}（周${WD[s._in.getDay()]}）– ${md(s._out)} · ${s.nights} 晚 · ${s.name}</div>
       ${s.lodging?`<div>🛏 住宿：${s.lodging}</div>`:''}
-      ${s.addr?`<div>📍 ${s.addr} · <a href="${nav(s.lnglat,s.name,s.lnglat,s.name)}" target="_blank" rel="noopener">高德搜索</a></div>`:''}
+      ${s.addr?`<div>📍 ${s.addr} · <a href="${amapQ(s.nav || s.name)}" target="_blank" rel="noopener">高德搜索</a></div>`:''}
       ${s.nav?`<div>🧭 导航：${s.nav}${s.navll?`（${s.navll[1]}, ${s.navll[0]}）`:''} · <a href="${amapQ(s.nav)}" target="_blank" rel="noopener">高德搜索</a></div>`:''}
       ${s.parking?`<div>🅿️ ${s.parking}</div>`:''}
-      ${l?`<div>🚗 从${from.city.split(' ')[0]}过来 ${l.km} km · ${l.h} 小时${s.drive&&s.drive.waypoints?' · '+s.drive.via:''} · <a href="${nav(from.lnglat,from.name,s.lnglat,s.name)}" target="_blank" rel="noopener">高德导航</a></div>`:''}</div>
+      ${l?`<div>🚗 从${from.city.split(' ')[0]}过来 ${l.km} km · ${l.h} 小时${s.drive&&s.drive.waypoints?' · '+s.drive.via:''} · <a href="${amapQ(s.nav || s.name)}" target="_blank" rel="noopener">高德搜索</a></div>`:''}</div>
     ${s.note&&!s.planning?`<p class="note">${s.note}</p>`:''}
     ${s.planning?`<div class="planning"><b>每日游玩：${s.planning}</b><p>${s.note}</p><p>页面暂不列景点，避免把早期搜集的候选写成确定安排；确定后再补地点、预约和车程。</p></div>`:''}
     ${s.flex&&s.flex.length?`<section class="note"><h3>机动 / 待确认事项</h3>${s.flex.map(f=>`<div class="task"><b>${f.name}</b>${st(f.status)}<div class="tip">${f.note}</div></div>`).join('')}</section>`:''}
@@ -335,14 +356,14 @@ function city(s){
       <div class="tip">${p.tip}</div>${p.hours?`<div class="tip">🕒 ${p.hours}</div>`:''}${p.nav?`<div class="tip">🧭 导航：${p.nav}${p.navll?`（${p.navll[1]}, ${p.navll[0]}）`:''} · <a href="${amapQ(p.nav)}" target="_blank" rel="noopener">高德搜索</a> · 腾讯地图搜「${p.nav}」</div>`:''}${p.parking?`<div class="tip">🅿️ ${p.parking}</div>`:''}${p.ticket?`<div class="tip">🎫 ${p.ticket}</div>`:''}${p.elder?`<div class="tip">👵 ${p.elder}</div>`:''}${p.url?`<div class="tip"><a href="${p.url}" target="_blank" rel="noopener">查看地点 / 信息来源</a></div>`:''}${p.geo?`<div class="geo">${p.geo}</div>`:''}
       <div class="foot2"><span class="dist">${d?(d.km<1?'就在附近':`${d.km} km · ${d.min} 分钟`)+`<span> 离${shortBase(s)}${d.est?'（估）':''}</span>`:''}</span>
         <span class="links"><a class="xhs" href="${xhs(s.city+' '+p.name.replace(/（.*?）/g,''))}" target="_blank" rel="noopener">小红书</a>
-        <a href="${nav(s.lnglat,s.name,p.lnglat,p.name)}" target="_blank" rel="noopener">导航</a></span></div></div>`; });
+        <a href="${amapQ(p.nav || p.name)}" target="_blank" rel="noopener">高德搜索</a></span></div></div>`; });
   show(h, s.city+' · 苏州到五指山自驾');
   resetMap(); markActive(s.id);
   const pts = [s.lnglat];
   s.spots.forEach((p,j)=>{ if(!match(p,filter)) return; const d=D[j]; if(!d || d.km<=70) pts.push(p.lnglat);
     const m = L.marker(ll(p.lnglat),{icon:L.divIcon({className:'',html:`<div class="dot" style="background:var(--${p.geo?'geo':who(p)})"></div>`,iconSize:[18,18],iconAnchor:[9,9]}),title:p.name})
       .bindPopup(`<b>${p.name}</b>${p.hours?`<br>🕒 ${p.hours}`:''}${d?`<br>${d.km} km · ${d.min} 分钟`:''}`).on('click',()=>hl(j)).addTo(spotLayer); m._j=j; });
-  map.flyToBounds(L.latLngBounds(pts.map(ll)),{padding:[40,40],maxZoom:13,duration:.6});
+  fitMap(L.latLngBounds(pts.map(ll)),{padding:[40,40],maxZoom:13,duration:.6});
 }
 function hl(j){ document.querySelectorAll('.spot').forEach(e=>e.classList.toggle('hl',+e.dataset.j===j));
   const el=document.querySelector(`.spot[data-j="${j}"]`); if(el) el.scrollIntoView({block:'nearest',behavior:'smooth'}); }
@@ -356,12 +377,20 @@ function days(focus){
   resetMap(); routeLayer.eachLayer(l=>l.setStyle({opacity:.25}));
   let h = tabs('days') + `<div class="toolbar"><h2>逐日日程</h2><button class="pill" id="print">打印 / 存 PDF</button></div>
     <p class="sub">时间与顺序按状态标注；车程为 OSRM 路网估算，出发前请用高德 / 腾讯地图核对实时路况。点某一天可查看地点。</p>`;
+  h += `<label class="date-jump">跳到日期<select id="date-jump"><option value="">选择日期</option>
+    ${SCH.map(day=>`<option value="${day.d}" ${day.d===focus?'selected':''}>${md(dOf(day.d))} · ${byId[day.at].city}</option>`).join('')}</select></label>`;
   SCH.forEach((day,di)=>{
     const g = G.days[day.d] || {pos:[],hops:[]}, dt = dOf(day.d), atStop = byId[day.at], dd = dayDrive(day.d);
     const hopTo = b => g.hops.find(x=>x.b===b);
     const nameAt = i => i===-1 ? shortBase(byId[di?SCH[di-1].at:'suzhou']) : i===day.items.length ? shortBase(atStop) : itemTitle(day, day.items[i], g.pos[i]);
-    const llAt = i => (i===-1 ? g.start : i===day.items.length ? g.end : g.pos[i]).ll;
-    const hopHtml = x => x ? `<div class="hop"><span></span><span></span><span>${x.ferry?'⛴ 轮渡过海':`🚗 ${fmtH(x.min)} · ${x.km} km · <a href="${nav(llAt(x.a),nameAt(x.a),llAt(x.b),nameAt(x.b))}" target="_blank" rel="noopener">导航</a>`}</span></div>` : '';
+    const targetAt = i => {
+      if(i<0) return byId[di?SCH[di-1].at:'suzhou'];
+      if(i===day.items.length) return atStop;
+      const [owner, key] = (g.pos[i]?.ref || '').split(':');
+      return owner==='base' ? byId[key] : byId[owner]?.spots[+key];
+    };
+    const searchAt = i => targetAt(i)?.nav || targetAt(i)?.name || nameAt(i);
+    const hopHtml = x => x ? `<div class="hop"><span></span><span></span><span>${x.ferry?'⛴ 轮渡过海':`🚗 ${fmtH(x.min)} · ${x.km} km · <a href="${amapQ(searchAt(x.b))}" target="_blank" rel="noopener">高德搜索</a>`}</span></div>` : '';
     let n = 0;
     h += `<section class="day" id="d-${day.d}" data-d="${day.d}"><header><span class="dn">D${di+1}</span><span><span class="dt">${md(dt)} 周${WD[dt.getDay()]}</span> <span class="dc">${atStop.city.split(' ')[0]}</span>${st(day.status)}</span>
       <span class="sum ${dd.min>=240?'long':''}">开车 ${fmtH(dd.min)} · ${Math.round(dd.km)} km</span><button class="pill showday" data-showday="${day.d}">🗺 在地图上看这一天</button></header>
@@ -371,15 +400,16 @@ function days(focus){
     day.items.forEach((it,i)=>{
       const p = g.pos[i]; if(p && !(i===fl && g.start)) h += hopHtml(hopTo(i));
       h += `<li class="it"><span class="tm">${it.t}</span>${p?`<span class="pin">${++n}</span>`:'<span class="pin none"></span>'}
-        <span class="what">${it.k==='meet'?'<em class="kmeet">会面</em>':''}<b>${p?itemTitle(day,it,p):it.name}</b>${it.dur?`<small>约 ${fmtH(it.dur)}</small>`:''}${it.note?`<div>${it.note}</div>`:''}</span></li>`;
+        <span class="what">${it.k==='meet'?'<em class="kmeet">会面</em>':''}<b>${p?itemTitle(day,it,p):it.name}</b>${p&&searchAt(i)?`<a class="place-link" href="${amapQ(searchAt(i))}" target="_blank" rel="noopener">高德</a>`:''}${it.dur?`<small>约 ${fmtH(it.dur)}</small>`:''}${it.note?`<div>${it.note}</div>`:''}</span></li>`;
     });
     if(g.end) h += hopHtml(hopTo(day.items.length)) + `<li class="it"><span class="tm"></span><span class="pin none"></span><span class="what" style="color:var(--muted)">回${nameAt(day.items.length)}</span></li>`;
     h += `</ol></section>`;
   });
   show(h, '日程 · 苏州到五指山自驾');
   $('#print').onclick = () => window.print();
+  $('#date-jump').onchange = e => { if(e.target.value) go('days/'+e.target.value); };
   const target = focus && document.getElementById('d-'+focus);
-  if(target){ target.scrollIntoView({block:'start'}); focusDay(focus); } else map.flyToBounds(allBounds(),{padding:[30,30],duration:.6});
+  if(target){ target.scrollIntoView({block:'start'}); focusDay(focus); } else fitMap(allBounds(),{padding:[30,30],duration:.6});
 }
 function focusDay(d){
   document.querySelectorAll('.day').forEach(e=>e.classList.toggle('on',e.dataset.d===d));
@@ -391,7 +421,7 @@ function focusDay(d){
   day.items.forEach((it,i)=>{ const p=g.pos[i]; if(!p) return; n++; pts.push(p.ll);
     L.marker(ll(p.ll),{icon:L.divIcon({className:'',html:`<div class="dmk">${n}</div>`,iconSize:[22,22],iconAnchor:[11,11]}),zIndexOffset:2000})
       .bindPopup(`<b>${it.t} ${itemTitle(day,it,p)}</b>${it.note?`<br>${it.note}`:''}`).addTo(spotLayer); });
-  if(pts.length) map.flyToBounds(L.latLngBounds(pts.map(ll)),{padding:[40,40],maxZoom:13,duration:.6});
+  if(pts.length) fitMap(L.latLngBounds(pts.map(ll)),{padding:[40,40],maxZoom:13,duration:.6});
 }
 
 // ---- 图表 ----
@@ -404,13 +434,13 @@ function tipFor(box){
   box.addEventListener('pointerleave', ()=>tip.style.opacity=0);
 }
 function charts(){
-  resetMap(); map.flyToBounds(allBounds(),{padding:[30,30],duration:.6});
+  resetMap(); fitMap(allBounds(),{padding:[30,30],duration:.6});
   const ink = css('ink'), acc = css('accent'), warn = css('warn'), line = css('line');
   // 1. 每天开车多久
   const dd = SCH.map((d,i)=>({d:d.d, i, city:byId[d.at].city.split(' ')[0], ...dayDrive(d.d)}));
-  const W=360, H=170, padL=26, padB=22, cw=(W-padL)/dd.length, maxH=5, y=m=>H-padB-(m/60)/maxH*(H-padB-8);
+  const W=360, H=170, padL=26, padB=22, cw=(W-padL)/dd.length, maxH=Math.max(5, Math.ceil(Math.max(...dd.map(x=>x.min))/60)), y=m=>H-padB-(m/60)/maxH*(H-padB-16);
   let c1 = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="每天开车时长柱状图">`;
-  [0,1,2,3,4,5].forEach(t=>{ c1+=`<line x1="${padL}" x2="${W}" y1="${y(t*60)}" y2="${y(t*60)}" stroke="${line}" stroke-width="1" ${t===4?`stroke-dasharray="4 3" stroke="${warn}"`:''}/><text x="${padL-6}" y="${y(t*60)+4}" text-anchor="end">${t}h</text>`; });
+  Array.from({length:maxH+1},(_,i)=>i).forEach(t=>{ c1+=`<line x1="${padL}" x2="${W}" y1="${y(t*60)}" y2="${y(t*60)}" stroke="${t===4?warn:line}" stroke-width="1" ${t===4?`stroke-dasharray="4 3"`:''}/><text x="${padL-6}" y="${y(t*60)+4}" text-anchor="end">${t}h</text>`; });
   dd.forEach((x,k)=>{ const bx=padL+k*cw+1.5, bw=Math.max(2,cw-3), top=y(x.min), long=x.min>=240;
     c1+=`<g class="g" data-tip="D${k+1} · ${md(dOf(x.d))} ${x.city}<br>开车 ${fmtH(x.min)} · ${Math.round(x.km)} km" data-go="days/${x.d}">
       <rect class="bar" x="${bx}" y="${top}" width="${bw}" height="${Math.max(0,H-padB-top)}" rx="${Math.min(3,bw/2)}" fill="${long?warn:acc}"/>
@@ -463,7 +493,27 @@ function show(h, title){
   document.querySelectorAll('#bnav a').forEach(x=>{ if(x.getAttribute('href')==='#/'+cur) x.setAttribute('aria-current','page'); else x.removeAttribute('aria-current'); });
   if(mobile()) window.scrollTo(0,0);
 }
-const toMap = () => { window.scrollTo({top:0,behavior:'smooth'}); setTimeout(()=>{ if(window.scrollY>4) window.scrollTo(0,0); },700); };  // 平滑滚动没生效时直接跳回地图
+let mapTrigger;
+function toMap(trigger){
+  if(!mobile() || document.body.classList.contains('map-open')) return;
+  mapTrigger = trigger;
+  document.body.classList.add('map-open');
+  $('#map-open').setAttribute('aria-expanded','true');
+  $('#panel').inert = $('#bnav').inert = true;
+  map.invalidateSize({pan:false});
+  $('#map-close').focus({preventScroll:true});
+}
+function closeMap(restoreFocus = true){
+  if(!document.body.classList.contains('map-open')) return;
+  document.body.classList.remove('map-open');
+  $('#map-open').setAttribute('aria-expanded','false');
+  $('#panel').inert = $('#bnav').inert = false;
+  if(restoreFocus) mapTrigger?.focus({preventScroll:true});
+}
+$('#map-open').onclick = e => toMap(e.currentTarget);
+$('#map-close').onclick = () => closeMap();
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeMap(); });
+matchMedia('(max-width:820px)').addEventListener('change', e=>{ if(!e.matches) closeMap(false); });
 function go(id){ location.hash = '#/'+(id||''); }
 function render(){
   const path = location.hash.replace(/^#\/?/,''), [a,b] = path.split('/');
@@ -476,18 +526,16 @@ $('#panel').addEventListener('click', e=>{
   const f = e.target.closest('[data-f]'); if(f){ filter=f.dataset.f; render(); return; }
   const pz = e.target.closest('[data-poster]'); if(pz){ $('#lbimg').src='posters/'+pz.dataset.poster+'.webp'; $('#lbimg').alt=pz.getAttribute('aria-label'); $('#lb').showModal(); return; }
   if(e.target.closest('a')) return;
-  const sd = e.target.closest('[data-showday]'); if(sd){ focusDay(sd.dataset.showday); toMap(); return; }
+  const sd = e.target.closest('[data-showday]'); if(sd){ focusDay(sd.dataset.showday); toMap(sd); return; }
   const dh = e.target.closest('.day'); if(dh){ if(!mobile()) focusDay(dh.dataset.d); return; }
   const sp = e.target.closest('.spot'); if(!sp) return; const j=+sp.dataset.j;
-  spotLayer.eachLayer(m=>{ if(m._j===j){ map.flyTo(m.getLatLng(),Math.max(map.getZoom(),13),{duration:.5}); m.openPopup(); } }); hl(j); if(mobile()) toMap();
+  spotLayer.eachLayer(m=>{ if(m._j===j){ map.setView(m.getLatLng(),Math.max(map.getZoom(),13),{animate:!mobile()&&!reduceMotion.matches}); m.openPopup(); } }); hl(j); if(mobile()) toMap(sp);
 });
 $('#panel').addEventListener('keydown', e=>{ if(e.key==='Enter' && e.target.classList.contains('spot')) e.target.click(); });
 // 海报弹层：× 按钮、Esc（dialog 自带）、点黑色背景都能关
 $('#lbx').onclick = () => $('#lb').close();
 $('#lb').addEventListener('click', e=>{ if(e.target.id==='lb') $('#lb').close(); });
-window.addEventListener('hashchange', ()=>{ filter='all'; render(); });
-$('#tomap').onclick = toMap;
-window.addEventListener('scroll', ()=>$('#tomap').classList.toggle('show', mobile() && window.scrollY > $('#map').offsetHeight + 80), {passive:true});
+window.addEventListener('hashchange', ()=>{ closeMap(false); filter='all'; render(); });
 let rz; window.addEventListener('resize', ()=>{ clearTimeout(rz); rz=setTimeout(()=>map.invalidateSize(),150); });
 map.fitBounds(allBounds(),{padding:[30,30]});
 render();
