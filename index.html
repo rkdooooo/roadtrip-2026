@@ -240,7 +240,7 @@ const fmtH = m => m<60 ? m+' 分钟' : (Math.round(m/6)/10)+' 小时';
 
 // ---- 链接 ----
 const xhs = q => `https://www.xiaohongshu.com/search_result?keyword=${enc(q)}`;
-const nav = (a,an,b,bn) => `https://uri.amap.com/navigation?from=${a[0]},${a[1]},${enc(an)}&to=${b[0]},${b[1]},${enc(bn)}&mode=car&coordinate=gaode&callnative=1`;
+const nav = (a,an,b,bn) => `https://uri.amap.com/search?keyword=${enc(bn)}&city=${enc(bn)}&callnative=1`;
 const shortBase = s => s.type==='taikang' ? s.name.replace('泰康之家·','') : '住处';
 const who = p => p.who || 'both';
 const match = (p,w) => w==='all' || (w==='geo' ? !!p.geo : who(p)===w || who(p)==='both');
@@ -253,7 +253,7 @@ const ll = p => [p[1],p[0]];
 const css = v => getComputedStyle(document.documentElement).getPropertyValue('--'+v).trim();
 const routeLayer = L.layerGroup().addTo(map), spotLayer = L.layerGroup().addTo(map), stopMk = {};
 S.forEach((s,i)=>{ if(!i) return; const l=G.legs[s.id]; const path=(l&&l.path)||[S[i-1].lnglat,s.lnglat];
-  L.polyline(path.map(ll),{color:css(l&&l.ferry?'ferry':'accent'),weight:4,opacity:.85,dashArray:l&&l.ferry?'6 8':null}).addTo(routeLayer); });
+  L.polyline(path.map(ll),{color:css(l&&l.ferry?'ferry':'accent'),weight:4,opacity:.85,dashArray:'6 8'}).addTo(routeLayer); });
 S.forEach((s,i)=>{
   const icon = L.divIcon({className:'',html:`<div class="mk t-${s.type}" style="width:28px;height:28px">${s.type==='home'?'家':i}</div>`,iconSize:[28,28],iconAnchor:[14,14]});
   stopMk[s.id] = L.marker(ll(s.lnglat),{icon,zIndexOffset:1000,title:s.city}).addTo(map)
@@ -272,20 +272,20 @@ const tabs = cur => `<nav class="tabs" aria-label="页面">${[['','路线'],['da
 function overview(){
   resetMap(); map.flyToBounds(allBounds(),{padding:[30,30],duration:.6});
   const [t1,t2] = T.title.split(' · ');
-  let h = tabs('') + `<h1>${t1}</h1><div class="sub">${t2?t2+'<br>':''}${start.getFullYear()}.${md(start).replace('/','.')} 出发 · ${end.getFullYear()}.${md(end).replace('/','.')} 到家</div>
+  let h = tabs('') + `<h1>${t1}</h1><div class="sub">${t2?t2+'<br>':''}${start.getFullYear()}.${md(start).replace('/','.')} 出发 · ${end.getFullYear()}.${md(end).replace('/','.')} 过海</div>
     <div class="stats"><div class="stat"><b>${Math.round((end-start)/864e5)+1}</b><span>天</span></div>
-      <div class="stat"><b>${driveKm.toLocaleString()}</b><span>公里</span></div>
+      <div class="stat"><b>待计算</b><span>总里程</span></div>
       <div class="stat"><b>${cities.length}</b><span>个城市</span></div></div><ol class="route">`;
   S.forEach((s,i)=>{
     const l = i && leg(s);
     if(l) h += `<li class="leg">${l.ferry?'⛴ 过琼州海峡 · 船上约 1.5–2 小时':`🚗 ${l.km} km · ${l.h} 小时`}</li>`;
     if(s.type==='ferry') return;
-    const when = s.nights ? `<b>${md(s._in)} – ${md(s._out)}</b>${s.nights} 晚` : `<b>${md(s._in)}</b>${i?'到家':'出发'}`;
+    const when = s.nights ? `<b>${md(s._in)} – ${md(s._out)}</b>${s.nights} 晚` : `<b>${md(s._in)}</b>${s.type==='waypoint'?'途经':i?'到家':'出发'}`;
     const inner = `<span class="num t-${s.type}">${s.type==='home'?'家':i}</span><span class="main"><span class="city">${s.city}</span><span class="base">${s.name}</span></span><span class="when">${when}</span>`;
     h += `<li>${cities.includes(s) ? `<button class="row" data-go="${s.id}">${inner}<span class="chev" aria-hidden="true">›</span></button>` : `<div class="row plain">${inner}</div>`}</li>`;
   });
   h += `</ol><details><summary>出发前要知道</summary><ul>${T.assumptions.concat(T.tips).map(t=>`<li>${t}</li>`).join('')}</ul></details>
-    <div class="foot">路线和车程由 OpenStreetMap 路网预先算好，城市里的时间已加三成余量。底图 © 高德地图。城市海报仿照 maptoposter（MIT）的风格绘制，数据 © OpenStreetMap contributors，瓦片来自 OpenFreeMap。</div>`;
+    <div class="foot">地图连线仅为站点示意，非实际道路；车程和里程待重新计算。园区标记为近似位置，请使用名称搜索并确认入口。底图 © 高德地图。城市海报仿照 maptoposter（MIT）的风格绘制，数据 © OpenStreetMap contributors，瓦片来自 OpenFreeMap。</div>`;
   show(h, '苏州到五指山自驾');
 }
 
@@ -303,16 +303,26 @@ function city(s){
     <button class="poster" data-poster="${s.id}" aria-label="查看${s.city}海报大图"><img src="posters/${s.id}.webp" alt="${s.city}街道海报" width="792" height="1056" onerror="this.parentNode.remove()"></button>
     <h2>${i}. ${s.city}${s.status?`<span class="badge">${s.status}</span>`:''}</h2>
     <div class="meta"><div>${md(s._in)}（周${WD[s._in.getDay()]}）– ${md(s._out)} · ${s.nights} 晚 · ${s.name}</div>
-      ${s.addr?`<div>📍 ${s.addr}</div>`:''}
+      ${s.addr?`<div>📍 ${s.addr} · <a href="${nav(s.lnglat,s.name,s.lnglat,s.name)}" target="_blank" rel="noopener">高德搜索</a></div>`:''}
       ${l?`<div>🚗 从${from.city.split(' ')[0]}过来 ${l.km} km · ${l.h} 小时${s.drive&&s.drive.waypoints?' · '+s.drive.via:''} · <a href="${nav(from.lnglat,from.name,s.lnglat,s.name)}" target="_blank" rel="noopener">高德导航</a></div>`:''}</div>
     ${s.note?`<p class="note">${s.note}</p>`:''}
+    ${s.id==='fuzhou'?`<section class="note"><h3>福州 · 12/15–12/19 建议</h3><p>12/15 宁德时代参访待确认，之后到福园休息。12/16 三坊七巷、林则徐纪念馆与福建博物院；12/17 马尾船政，下午保留会面弹性；12/18 鼓岭或休息，也可选择上下杭、烟台山。12/19 前往厦门。</p><p>三坊七巷与博物院适合同天分段游；船政在马尾，单独安排。鼓岭为山地，留意天气和盘山路；平潭距离较远，若去须作为一日独立安排。时间、停车及开放情况以实际为准。</p><p><a href="https://wlt.fujian.gov.cn/hdjl/wdxd/202502/t20250221_6766731.htm" target="_blank" rel="noopener">福建博物院开放时间</a> · <a href="https://www.fjczwh.com/Home/Visit?id=visitor" target="_blank" rel="noopener">船政文化景区导览</a> · <a href="https://gl.fuzhou.gov.cn/zwgk/glzx/xwdt/202609/t20260921_5373996.htm" target="_blank" rel="noopener">鼓岭官方路线</a></p></section>`:''}
+    ${s.id==='wenzhou'?`<section class="note"><h3>温州 · 近期游玩参考</h3><p>公开搜索未取得可核验的小红书笔记或热度排名；以下依据近期公开攻略与文旅信息整理。<a href="https://www.xiaohongshu.com/search_result?keyword=%E6%B8%A9%E5%B7%9E%E6%97%85%E6%B8%B8" target="_blank" rel="noopener">搜索小红书温州游记</a></p><p><b>12/12 途中：</b>雁荡山择一景区，傍晚到瓯园休息。</p><p><b>12/13 市区：</b>瓯园 → 江心屿及温州革命历史纪念馆 → 午饭 → 朔门古港 → 五马街 → 瓯园。纪念馆开放及预约情况待核实。按体力择重点；江心屿需坐船，遗址展示馆与考古陈列馆需预约。</p><p><b>12/14 轻松日：</b>三垟湿地慢走、园区休息；也可改成楠溪江古村或洞头一日，二选一。朔门遗址展示馆周一通常闭馆。</p><p>地图点位为近似位置，车程、停车、渡船及开放情况请出发前确认。<a href="https://www.sina.cn/news/detail/5340089442897488.html" target="_blank" rel="noopener">温州文旅路线</a> · <a href="https://news.66wz.com/system/2026/04/23/105738545.shtml" target="_blank" rel="noopener">朔门古港预约信息</a></p></section>`:''}
+    ${s.id==='ningbo'?`<section class="note"><h3>宁波 · 12/9–12/12 游玩规划</h3>
+    <p>近期旅行攻略常提东钱湖南岸、天一阁月湖和老外滩；尚未取得可核验的小红书热度数据，以下并非热度排名。地点标记为近似值，请点名称打开高德核对入口和停车场。</p>
+    <p><b>12/9 · 吴园 → 南浔古镇 → 甬园</b><br>途中在南浔吃午饭并游览古镇，重点可选小莲庄、嘉业堂藏书楼或沿河街区；晚些抵达甬园后休息。景区内部分小景点参考 08:00–16:30，16:00 停止入园，出发前复核。<a href="https://ditu.amap.com/place/B023C0QLG2" target="_blank" rel="noopener">南浔古镇南门（高德）</a></p>
+    <p><b>12/10 · 宁波老城</b><br>甬园 → 天一阁 → 午饭 → 大革命时期中共宁波地委旧址纪念馆 → 月湖 → 老外滩 → 甬园。天一阁冬令周二至周日 08:30–17:00，16:30 停止入园；纪念馆参考周二至周日 08:30–11:30、13:30–16:30，周一闭馆。</p>
+    <p><b>12/11 · 东钱湖骑行、韩岭与日落</b><br>钱湖运动π附近停车租车 → 湖边可通行路段骑行 → 按规则还车 → 韩岭美术馆和老街 → 天气好时去小加州南岸 → 甬园。美术馆周二至周日 10:00–18:00（17:30停止入馆），周一闭馆；宁波当天日落约16:54，受天气和地形影响。</p>
+    <p>钱湖运动π地图点为园区内商户坐标，小加州点为南岸卡丁车乐园参考坐标；具体停车场和租车营业时间待核实。骑行前确认禁行路段、续航和归还地点；美术馆地图点为韩岭附近示意。</p>
+    <p><b>阴总会面及春晓项目 · 随时调整</b><br>临近日期再确认时间、地点及春晓项目地址；你和 Wade 届时单独行动，伯伯和阿姨可按当天的路线继续游玩或回园休息。</p>
+    <p>开放时间、票价、长者优惠、停车和天气请出发前复核；时间为建议，车程按实时导航查询。<a target="_blank" rel="noopener" href="https://www.xiaohongshu.com/search_result?keyword=%E5%AE%81%E6%B3%A2%E6%97%85%E6%B8%B8">搜索小红书宁波攻略</a> · <a target="_blank" rel="noopener" href="https://travelnews.qunar.com/qa_strategy/ningbo-dongqian-lake-south-shore-one-day-itinerary">东钱湖南岸近期攻略</a> · <a target="_blank" rel="noopener" href="https://www.nbtour.com/archives/4191?lang=zh_CN">溪口景区资料</a> · <a target="_blank" rel="noopener" href="https://www.amap.com/place/B0FFLDB3FC">韩岭高德位置</a></p></section>`:''}
     ${nightDays.length?`<p><a class="pill" href="#/days/${nightDays[0]}">看这几天的分时日程 →</a></p>`:''}
     <h3>景点</h3>
     <div class="filters" role="group" aria-label="按兴趣筛选">${F.map(([w,n])=>`<button data-f="${w}" class="${filter===w?'on':''}" aria-pressed="${filter===w}">${n}<small>${count(w)}</small></button>`).join('')}</div>`;
   s.spots.forEach((p,j)=>{ if(!match(p,filter)) return; const d=D[j];
     h += `<div class="spot" data-j="${j}" tabindex="0">
       <div>${p.geo?'<span class="chip w-geo">地理</span>':''}<span class="chip w-${who(p)}">${WHO[who(p)]}</span><span class="name">${p.name}</span></div>
-      <div class="tip">${p.tip}</div>${p.geo?`<div class="geo">${p.geo}</div>`:''}
+      <div class="tip">${p.tip}</div>${p.hours?`<div class="tip">🕒 ${p.hours}</div>`:''}${p.url?`<div class="tip"><a href="${p.url}" target="_blank" rel="noopener">查看地点 / 信息来源</a></div>`:''}${p.geo?`<div class="geo">${p.geo}</div>`:''}
       <div class="foot2"><span class="dist">${d?(d.km<1?'就在附近':`${d.km} km · ${d.min} 分钟`)+`<span> 离${shortBase(s)}${d.est?'（估）':''}</span>`:''}</span>
         <span class="links"><a class="xhs" href="${xhs(s.city+' '+p.name.replace(/（.*?）/g,''))}" target="_blank" rel="noopener">小红书</a>
         <a href="${nav(s.lnglat,s.name,p.lnglat,p.name)}" target="_blank" rel="noopener">导航</a></span></div></div>`; });
@@ -321,7 +331,7 @@ function city(s){
   const pts = [s.lnglat];
   s.spots.forEach((p,j)=>{ if(!match(p,filter)) return; const d=D[j]; if(!d || d.km<=70) pts.push(p.lnglat);
     const m = L.marker(ll(p.lnglat),{icon:L.divIcon({className:'',html:`<div class="dot" style="background:var(--${p.geo?'geo':who(p)})"></div>`,iconSize:[18,18],iconAnchor:[9,9]}),title:p.name})
-      .bindPopup(`<b>${p.name}</b>${d?`<br>${d.km} km · ${d.min} 分钟`:''}`).on('click',()=>hl(j)).addTo(spotLayer); m._j=j; });
+      .bindPopup(`<b>${p.name}</b>${p.hours?`<br>🕒 ${p.hours}`:''}${d?`<br>${d.km} km · ${d.min} 分钟`:''}`).on('click',()=>hl(j)).addTo(spotLayer); m._j=j; });
   map.flyToBounds(L.latLngBounds(pts.map(ll)),{padding:[40,40],maxZoom:13,duration:.6});
 }
 function hl(j){ document.querySelectorAll('.spot').forEach(e=>e.classList.toggle('hl',+e.dataset.j===j));
@@ -335,7 +345,7 @@ function itemTitle(day, it, pos){
 function days(focus){
   resetMap(); routeLayer.eachLayer(l=>l.setStyle({opacity:.25}));
   let h = tabs('days') + `<div class="toolbar"><h2>逐日日程</h2><button class="pill" id="print">打印 / 存 PDF</button></div>
-    <p class="sub">每天按时间排好；两地之间写了车程，点「导航」直接打开高德。点某一天，地图上就只显示这一天的路线。</p>`;
+    <p class="sub">时间为暂定建议；路网数据暂不可用，请使用高德查询实时路线与车程。点某一天可查看地点。</p>`;
   SCH.forEach((day,di)=>{
     const g = G.days[day.d] || {pos:[],hops:[]}, dt = dOf(day.d), st = byId[day.at], dd = dayDrive(day.d);
     const hopTo = b => g.hops.find(x=>x.b===b);
@@ -344,7 +354,7 @@ function days(focus){
     const hopHtml = x => x ? `<div class="hop"><span></span><span></span><span>${x.ferry?'⛴ 轮渡过海':`🚗 ${fmtH(x.min)} · ${x.km} km · <a href="${nav(llAt(x.a),nameAt(x.a),llAt(x.b),nameAt(x.b))}" target="_blank" rel="noopener">导航</a>`}</span></div>` : '';
     let n = 0;
     h += `<section class="day" id="d-${day.d}" data-d="${day.d}"><header><span class="dn">D${di+1}</span><span><span class="dt">${md(dt)} 周${WD[dt.getDay()]}</span> <span class="dc">${st.city.split(' ')[0]}</span></span>
-      <span class="sum ${dd.min>=240?'long':''}">🚗 ${fmtH(dd.min)} · ${Math.round(dd.km)} km</span><button class="pill showday" data-showday="${day.d}">🗺 在地图上看这一天</button></header><ol class="items">`;
+      <span class="sum ${dd.min>=240?'long':''}">车程待查询</span><button class="pill showday" data-showday="${day.d}">🗺 在地图上看这一天</button></header><ol class="items">`;
     if(g.start) h += `<li class="it"><span class="tm"></span><span class="pin none"></span><span class="what" style="color:var(--muted)">从${nameAt(-1)}出发</span></li>` + hopHtml(hopTo(day.items.findIndex((_,i)=>g.pos[i])));
     const fl = day.items.findIndex((_,i)=>g.pos[i]);
     day.items.forEach((it,i)=>{
@@ -369,7 +379,7 @@ function focusDay(d){
   let n = 0;
   day.items.forEach((it,i)=>{ const p=g.pos[i]; if(!p) return; n++; pts.push(p.ll);
     L.marker(ll(p.ll),{icon:L.divIcon({className:'',html:`<div class="dmk">${n}</div>`,iconSize:[22,22],iconAnchor:[11,11]}),zIndexOffset:2000})
-      .bindPopup(`<b>${it.t} ${itemTitle(day,it,p)}</b>`).addTo(spotLayer); });
+      .bindPopup(`<b>${it.t} ${itemTitle(day,it,p)}</b>${it.note?`<br>${it.note}`:''}`).addTo(spotLayer); });
   if(pts.length) map.flyToBounds(L.latLngBounds(pts.map(ll)),{padding:[40,40],maxZoom:13,duration:.6});
 }
 
@@ -417,12 +427,13 @@ function charts(){
       c3+=`<g class="g" data-tip="${x.s.city} · ${WHO[cat]}：${v} 个" data-go="${x.s.id}"><rect class="bar" x="${cx}" y="${yy+3}" width="${w}" height="13" rx="3" fill="${css(cat)}"/><rect class="hit" x="${cx}" y="${yy}" width="${v*unit}" height="${rh}"/></g>`; cx+=v*unit; });
     c3+=`<text x="${cx+4}" y="${yy+14}">${x.s.spots.length}${x.geo?` · 地理 ${x.geo}`:''}</text>`; });
   c3 += `</svg>`;
+  c1 = '<p>路网数据暂不可用，每日车程待查询。</p>';
   const totMin = dd.reduce((a,x)=>a+x.min,0), nSpots = cities.reduce((a,s)=>a+s.spots.length,0);
   const table = (head, rows) => `<details><summary>查看数据表</summary><table><tr>${head.map(x=>`<th>${x}</th>`).join('')}</tr>${rows.map(r=>`<tr>${r.map(x=>`<td>${x}</td>`).join('')}</tr>`).join('')}</table></details>`;
   const h = tabs('charts') + `<h2 style="margin-top:14px">图表</h2>
-    <div class="stats"><div class="stat"><b>${Math.round(totMin/60)}</b><span>小时开车</span></div><div class="stat"><b>${dd.filter(x=>x.min>=240).length}</b><span>天超过 4 小时</span></div><div class="stat"><b>${nSpots}</b><span>个景点</span></div></div>
-    <div class="chart" id="c1"><h3>每天开车多久</h3><p class="cap">包括城际赶路和当天进城玩的往返；超过 4 小时的标成陶土色。点柱子看那一天的日程。</p>${c1}
-      ${table(['日期','城市','开车','公里'], dd.map(x=>[md(dOf(x.d)),x.city,fmtH(x.min),Math.round(x.km)]))}</div>
+    <div class="stats"><div class="stat"><b>待查询</b><span>开车时长</span></div><div class="stat"><b>待查询</b><span>长途天数</span></div><div class="stat"><b>${nSpots}</b><span>个景点</span></div></div>
+    <div class="chart" id="c1"><h3>每天开车多久</h3><p class="cap">车程需按实际酒店和路况重新计算。</p>${c1}
+      </div>
     <div class="chart" id="c2"><h3>每站住几晚</h3><p class="cap">点条形进入那座城市。</p>${c2}
       ${table(['城市','晚数','住处'], nn.map(x=>[x.s.city,x.n,x.s.name]))}</div>
     <div class="chart" id="c3"><h3>每站的景点，按兴趣分</h3>
