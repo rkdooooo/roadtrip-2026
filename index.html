@@ -92,6 +92,8 @@ details ul{padding-left:18px;color:var(--muted)}
 .planning b{font-family:var(--serif)}
 .planning p{margin:4px 0 0;color:var(--muted);font-size:13.5px}
 .task{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 13px;margin:8px 0}
+.food{margin:0;padding-left:18px;color:var(--muted);font-size:14px;line-height:1.6}
+.food li{margin:3px 0}
 .task .tip{font-size:13.5px;color:var(--muted);margin-top:2px}
 .meta{font-size:13.5px;color:var(--muted);margin-top:6px}
 .meta div{margin-top:2px}
@@ -460,6 +462,7 @@ function city(s){
     ${s.note&&!s.planning?`<p class="note">${s.note}</p>`:''}
     ${s.planning?`<div class="planning"><b>每日游玩：${s.planning}</b><p>${s.note}</p><p>页面暂不列景点，避免把早期搜集的候选写成确定安排；确定后再补地点、预约和车程。</p></div>`:''}
     ${s.flex&&s.flex.length?`<section class="note"><h3>机动 / 待确认事项</h3>${s.flex.map(f=>`<div class="task"><b>${f.name}</b>${st(f.status)}<div class="tip">${f.note}</div></div>`).join('')}</section>`:''}
+    ${s.food&&s.food.length?`<section class="note"><h3>吃什么（自己找附近店）</h3><ul class="food">${s.food.map(t=>`<li>${t}</li>`).join('')}</ul><p class="tip">三餐不排进日程、不订位：按当天位置就近吃，晚饭多数回住处简单解决。</p></section>`:''}
     ${nightDays.length?`<p><a class="pill" href="#/days/${nightDays[0]}">看这几天的分时日程 →</a></p>`:''}
     ${s.spots.length?`<h3>已列入的地点</h3>
     <div class="filters" role="group" aria-label="按兴趣筛选">${F.map(([w,n])=>`<button data-f="${w}" class="${filter===w?'on':''}" aria-pressed="${filter===w}">${n}<small>${count(w)}</small></button>`).join('')}</div>`:''}`;
@@ -541,7 +544,7 @@ function days(focus){
     const hopHtml = x => x ? `<div class="hop"><span></span><span></span><span>${x.ferry?'⛴ 轮渡过海':`🚗 ${fmtH(x.min)} · ${x.km} km · <a href="${amapQ(searchAt(x.b))}" target="_blank" rel="noopener">高德搜索</a>`}</span></div>` : '';
     let n = 0;
     h += `<section class="day" id="d-${day.d}" data-d="${day.d}"><header><span class="dn">D${di+1}</span><span><span class="dt">${md(dt)} 周${WD[dt.getDay()]}</span> <span class="dc">${atStop.city.split(' ')[0]}</span>${st(day.status)}</span>
-      <span class="sum ${dd.min>=240?'long':''}">开车 ${fmtH(dd.min)} · ${Math.round(dd.km)} km</span><button class="pill showday" data-showday="${day.d}">🗺 在地图上看这一天</button></header>
+      <span class="sum ${dd.min>=240?'long':''}">${Math.round(dd.km||0)?`开车 ${fmtH(dd.min)} · ${Math.round(dd.km)} km`:'今天不开车'}</span><button class="pill showday" data-showday="${day.d}">🗺 在地图上看这一天</button></header>
       ${day.note?`<p class="sub" style="margin:4px 0 0">${day.note}</p>`:''}<ol class="items">`;
     if(g.start) h += `<li class="it"><span class="tm"></span><span class="pin none"></span><span class="what" style="color:var(--muted)">从${nameAt(-1)}出发</span></li>` + hopHtml(hopTo(day.items.findIndex((_,i)=>g.pos[i])));
     const fl = day.items.findIndex((_,i)=>g.pos[i]);
