@@ -135,6 +135,7 @@ details ul{padding-left:18px;color:var(--muted)}
 .it{display:grid;grid-template-columns:44px 22px 1fr;gap:0 8px;align-items:start;padding:5px 0}
 .it .tm{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;padding-top:1px}
 .it .pin{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font:700 11px/1 var(--sans);color:#fff;background:var(--accent);margin-top:1px}
+.it .pin.home{background:var(--home)}
 .it .pin.none{background:transparent;border:2px solid var(--line);width:12px;height:12px;margin:5px 4px 0}
 .it .what{font-size:14.5px}
 .it .what b{font-weight:600}
@@ -546,7 +547,8 @@ function days(focus){
     const fl = day.items.findIndex((_,i)=>g.pos[i]);
     day.items.forEach((it,i)=>{
       const p = g.pos[i]; if(p && !(i===fl && g.start)) h += hopHtml(hopTo(i));
-      h += `<li class="it"><span class="tm">${it.t}</span>${p?`<span class="pin">${++n}</span>`:'<span class="pin none"></span>'}
+      const pin = p ? ((p.ref||'').startsWith('base:') ? '<span class="pin home" title="住处">住</span>' : `<span class="pin">${++n}</span>`) : '<span class="pin none"></span>';
+      h += `<li class="it"><span class="tm">${it.t}</span>${pin}
         <span class="what">${it.k==='meet'?'<em class="kmeet">会面</em>':''}<b>${p?itemTitle(day,it,p):it.name}</b>${p&&searchAt(i)?`<a class="place-link" href="${amapQ(searchAt(i))}" target="_blank" rel="noopener">高德</a>`:''}${it.dur?`<small>约 ${fmtH(it.dur)}</small>`:''}${it.note?`<div>${it.note}</div>`:''}</span></li>`;
     });
     if(g.end) h += hopHtml(hopTo(day.items.length)) + `<li class="it"><span class="tm"></span><span class="pin none"></span><span class="what" style="color:var(--muted)">回${nameAt(day.items.length)}</span></li>`;
@@ -584,22 +586,23 @@ function focusDay(d){
   day.items.forEach((it,i)=>{
     const p = g.pos[i];
     if(!p) return;
-    const number = ++n, key = p.ll.join(',');
+    const isBase = (p.ref || '').startsWith('base:');
+    const number = isBase ? '住' : String(++n), key = p.ll.join(',');
     const title = itemTitle(day,it,p);
     const target = placeFor(p);
     const existing = places.get(key);
     if(existing) {
-      existing.number += '·'+number;
+      if(!isBase) existing.number += '·'+number;
       existing.details.push(it.t+' '+title);
     } else {
-      places.set(key,{ll:p.ll,number:String(number),title:target?.name || title,details:[it.t+' '+title],destination:target?.nav || target?.name || title,parkName:target?.park?.name || '',parkNav:target?.park?.nav || '',parkFee:target?.park?.fee || ''});
+      places.set(key,{ll:p.ll,number,isBase,title:target?.name || title,details:[it.t+' '+title],destination:target?.nav || target?.name || title,parkName:target?.park?.name || '',parkNav:target?.park?.nav || '',parkFee:target?.park?.fee || ''});
     }
   });
   for(const p of places.values()){
     pts.push(ll(p.ll));
     const targets = [{label:'高德搜地点',q:p.destination}];
     if(p.parkName) targets.push({label:'高德搜停车场',q:p.parkNav});
-    addPoint(p.ll,p.number,p.title,p.details.join('<br>'),targets,{parkName:p.parkName,parkFee:p.parkFee});
+    addPoint(p.ll,p.number,p.title,p.details.join('<br>'),targets,{tone:p.isBase?'home':'',parkName:p.parkName,parkFee:p.parkFee});
   }
   refreshPoints();
   $('#map-line-key').hidden = !g.hops.length;
