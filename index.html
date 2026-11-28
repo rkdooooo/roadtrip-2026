@@ -144,6 +144,7 @@ details ul{padding-left:18px;color:var(--muted)}
 .it .what small{color:var(--muted);font-size:12.5px;margin-left:6px}
 .it .what div{color:var(--muted);font-size:13px}
 .it .kmeet{font-style:normal;font-size:12px;font-weight:600;color:var(--warn);border:1px solid currentColor;border-radius:4px;padding:0 4px;margin-right:6px;vertical-align:1px}
+.it .kvisit{font-style:normal;font-size:12px;font-weight:600;color:var(--accent);border:1px solid currentColor;border-radius:4px;padding:0 4px;margin-right:6px;vertical-align:1px}
 .hop{display:grid;grid-template-columns:44px 22px 1fr;gap:0 8px;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
 .hop span:nth-child(2){border-left:2px dotted var(--line);margin-left:10px;min-height:22px}
 .hop a{color:var(--muted)}
@@ -181,6 +182,7 @@ dialog.lb .x{position:absolute;top:-14px;right:-14px;width:40px;height:40px;bord
 .map-marker.scenic span,.spot-no.scenic{background:#18567c}
 .map-marker.home span{background:#5b4b8a}
 .map-marker.active span{background:#202823;outline:3px solid #eab85f;scale:1.08}
+.map-marker.dot span{width:14px;height:14px;background:#7d8b83}
 .spot-no{display:inline-grid;width:25px;height:25px;margin-right:7px;font-size:13px;vertical-align:middle}
 .p-badge{position:absolute;right:-3px;bottom:-3px;width:18px;height:18px;border-radius:5px;background:#0f5c46;color:#fff;font:700 11px/18px var(--sans);text-align:center;border:2px solid #fff;font-style:normal;box-shadow:0 1px 3px #0004}
 .map-legend{position:absolute;left:12px;top:12px;z-index:800;display:flex;flex-wrap:wrap;gap:4px 10px;padding:7px 10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);font:12.5px/1.5 var(--sans);color:var(--muted);max-width:calc(100% - 70px)}
@@ -395,9 +397,9 @@ function addPoint(llPair, number, title, detail, targets, opts={}){
   const {tone='', parkName='', parkFee='', onSelect} = opts;
   const index = pointMarkers.length;
   const links = (targets||[]).map(t=>`<a class="map-popup-link" href="${amapQ(t.q)}" target="_blank" rel="noopener">${t.label}</a>`).join('');
-  const html = `<b>${number} · ${title}</b>${detail?`<div class="pop-d">${detail}</div>`:''}${parkName?`<div class="pop-p">🅿️ <b>${parkName}</b>${parkFee?`<br>${parkFee}`:''}</div>`:''}${links?`<div class="pop-l">${links}</div>`:''}`;
+  const html = `<b>${number?number+' · ':''}${title}</b>${detail?`<div class="pop-d">${detail}</div>`:''}${parkName?`<div class="pop-p">🅿️ <b>${parkName}</b>${parkFee?`<br>${parkFee}`:''}</div>`:''}${links?`<div class="pop-l">${links}</div>`:''}`;
   const marker = L.marker(ll(llPair),{
-    icon:L.divIcon({className:'map-marker '+tone,html:`<span aria-hidden="true">${number}</span>${parkName?'<i class="p-badge">P</i>':''}`,iconSize:[44,44],iconAnchor:[22,22],popupAnchor:[0,-19],tooltipAnchor:[0,-20]}),
+    icon:L.divIcon({className:'map-marker '+tone+(number?'':' dot'),html:`<span aria-hidden="true">${number}</span>${parkName?'<i class="p-badge">P</i>':''}`,iconSize:[44,44],iconAnchor:[22,22],popupAnchor:[0,-19],tooltipAnchor:[0,-20]}),
     title, autoPanOnFocus:false, zIndexOffset:1800
   }).bindTooltip(title,{direction:'top'})
     .bindPopup(html,{maxWidth:260})
@@ -550,9 +552,9 @@ function days(focus){
     const fl = day.items.findIndex((_,i)=>g.pos[i]);
     day.items.forEach((it,i)=>{
       const p = g.pos[i]; if(p && !(i===fl && g.start)) h += hopHtml(hopTo(i));
-      const pin = p ? ((p.ref||'').startsWith('base:') ? '<span class="pin home" title="住处">住</span>' : `<span class="pin">${++n}</span>`) : '<span class="pin none"></span>';
+      const pin = p ? ((p.ref||'').startsWith('base:') ? '<span class="pin home" title="住处">住</span>' : (p.ref ? `<span class="pin">${++n}</span>` : '<span class="pin none"></span>')) : '<span class="pin none"></span>';
       h += `<li class="it"><span class="tm">${it.t}</span>${pin}
-        <span class="what">${it.k==='meet'?'<em class="kmeet">会面</em>':''}<b>${p?itemTitle(day,it,p):it.name}</b>${p&&searchAt(i)?`<a class="place-link" href="${amapQ(searchAt(i))}" target="_blank" rel="noopener">高德</a>`:''}${it.dur?`<small>约 ${fmtH(it.dur)}</small>`:''}${it.note?`<div>${it.note}</div>`:''}</span></li>`;
+        <span class="what">${it.k==='meet'?'<em class="kmeet">会面</em>':it.k==='visit'?'<em class="kvisit">参访</em>':''}<b>${p?itemTitle(day,it,p):it.name}</b>${p&&searchAt(i)?`<a class="place-link" href="${amapQ(searchAt(i))}" target="_blank" rel="noopener">高德</a>`:''}${it.dur?`<small>约 ${fmtH(it.dur)}</small>`:''}${it.note?`<div>${it.note}</div>`:''}</span></li>`;
     });
     if(g.end) h += hopHtml(hopTo(day.items.length)) + `<li class="it"><span class="tm"></span><span class="pin none"></span><span class="what" style="color:var(--muted)">回${nameAt(day.items.length)}</span></li>`;
     h += `</ol></section>`;
@@ -590,12 +592,12 @@ function focusDay(d){
     const p = g.pos[i];
     if(!p) return;
     const isBase = (p.ref || '').startsWith('base:');
-    const number = isBase ? '住' : String(++n), key = p.ll.join(',');
+    const number = isBase ? '住' : (p.ref ? String(++n) : ''), key = p.ll.join(',');
     const title = itemTitle(day,it,p);
     const target = placeFor(p);
     const existing = places.get(key);
     if(existing) {
-      if(!isBase) existing.number += '·'+number;
+      if(!isBase && number) existing.number = existing.number ? existing.number+'·'+number : number;
       existing.details.push(it.t+' '+title);
     } else {
       places.set(key,{ll:p.ll,number,isBase,title:target?.name || title,details:[it.t+' '+title],destination:target?.nav || target?.name || title,parkName:target?.park?.name || '',parkNav:target?.park?.nav || '',parkFee:target?.park?.fee || ''});

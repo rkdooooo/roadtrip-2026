@@ -87,7 +87,8 @@ async function get(url) { for (let i = 0; i < 3; i++) { try { const j = await (a
     for (let k = 1; k < located.length; k++) {
       const ia = located[k - 1], ib = located[k], A = P(ia).ll, B = P(ib).ll, via = (day.items[ib] && day.items[ib].via) || [];
       if (A[0] === B[0] && A[1] === B[1]) continue;
-      if (day.items[ia] && day.items[ia].base === 'ferry') { hops.push({ a: ia, b: ib, ferry: true, path: [A, B] }); continue; }
+      const ferryHop = (day.items[ia] && day.items[ia].base === 'ferry') || (day.items[ib] && day.items[ib].ferry);
+      if (ferryHop) { hops.push({ a: ia, b: ib, ferry: true, path: [A, B] }); continue; }
       const key = [A, ...via, B].join('|');
       if (!memo[key]) {
         const q = [A, ...via, B].map(gcj2wgs).map(x => x.map(r5).join(',')).join(';');
